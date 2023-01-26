@@ -7,7 +7,7 @@ import (
 	"unsafe"
 )
 
-func unit(info *BackendInfo, p DPoint) Point {
+func unit(info *RenderConf, p DPoint) Point {
 	var q Point
 	q.X = int(math.Floor(p.X*info.Unit + 0.5))
 	q.Y = int(math.Floor(p.Y*info.Unit + 0.5))
@@ -55,19 +55,19 @@ func ship(fout *stdio.File, fmt *byte, _rest ...interface{}) {
 	}
 	shiptoken(fout, p)
 }
-func svg_moveto(info *BackendInfo, fout *stdio.File, p DPoint) {
+func svg_moveto(info *RenderConf, fout *stdio.File, p DPoint) {
 	cur = unit(info, p)
 	ship(fout, libc.CString("M%ld %ld"), cur.X, cur.Y)
 	lastop = 'M'
 }
-func svg_rmoveto(info *BackendInfo, fout *stdio.File, p DPoint) {
+func svg_rmoveto(info *RenderConf, fout *stdio.File, p DPoint) {
 	var q Point
 	q = unit(info, p)
 	ship(fout, libc.CString("m%ld %ld"), q.X-cur.X, q.Y-cur.Y)
 	cur = q
 	lastop = 'm'
 }
-func svg_lineto(info *BackendInfo, fout *stdio.File, p DPoint) {
+func svg_lineto(info *RenderConf, fout *stdio.File, p DPoint) {
 	var q Point
 	q = unit(info, p)
 	if int(lastop) != 'l' {
@@ -78,7 +78,7 @@ func svg_lineto(info *BackendInfo, fout *stdio.File, p DPoint) {
 	cur = q
 	lastop = 'l'
 }
-func svg_curveto(info *BackendInfo, fout *stdio.File, p1 DPoint, p2 DPoint, p3 DPoint) {
+func svg_curveto(info *RenderConf, fout *stdio.File, p1 DPoint, p2 DPoint, p3 DPoint) {
 	var (
 		q1 Point
 		q2 Point
@@ -95,7 +95,7 @@ func svg_curveto(info *BackendInfo, fout *stdio.File, p1 DPoint, p2 DPoint, p3 D
 	cur = q3
 	lastop = 'c'
 }
-func svg_path(info *BackendInfo, fout *stdio.File, curve *Curve, abs int) int {
+func svg_path(info *RenderConf, fout *stdio.File, curve *Curve, abs int) int {
 	var (
 		i int
 		c *DPoint
@@ -121,7 +121,7 @@ func svg_path(info *BackendInfo, fout *stdio.File, curve *Curve, abs int) int {
 	shiptoken(fout, libc.CString("z"))
 	return 0
 }
-func svg_jaggy_path(info *BackendInfo, fout *stdio.File, pt *Point, n int, abs int) int {
+func svg_jaggy_path(info *RenderConf, fout *stdio.File, pt *Point, n int, abs int) int {
 	var (
 		i    int
 		cur  Point
@@ -160,7 +160,7 @@ func svg_jaggy_path(info *BackendInfo, fout *stdio.File, pt *Point, n int, abs i
 	shiptoken(fout, libc.CString("z"))
 	return 0
 }
-func write_paths_opaque(info *BackendInfo, fout *stdio.File, tree *Path) {
+func write_paths_opaque(info *RenderConf, fout *stdio.File, tree *Path) {
 	var (
 		p *Path
 		q *Path
@@ -201,7 +201,7 @@ func write_paths_opaque(info *BackendInfo, fout *stdio.File, tree *Path) {
 		}
 	}
 }
-func write_paths_transparent_rec(info *BackendInfo, fout *stdio.File, tree *Path) {
+func write_paths_transparent_rec(info *RenderConf, fout *stdio.File, tree *Path) {
 	var (
 		p *Path
 		q *Path
@@ -238,7 +238,7 @@ func write_paths_transparent_rec(info *BackendInfo, fout *stdio.File, tree *Path
 		}
 	}
 }
-func write_paths_transparent(info *BackendInfo, fout *stdio.File, tree *Path) {
+func write_paths_transparent(info *RenderConf, fout *stdio.File, tree *Path) {
 	if info.Grouping == 0 {
 		column = stdio.Fprintf(fout, "<path d=\"")
 		newline = 1
@@ -249,7 +249,7 @@ func write_paths_transparent(info *BackendInfo, fout *stdio.File, tree *Path) {
 		stdio.Fprintf(fout, "\"/>\n")
 	}
 }
-func page_svg(info *BackendInfo, fout *stdio.File, plist *Path, imginfo *ImgInfo) int {
+func page_svg(info *RenderConf, fout *stdio.File, plist *Path, imginfo *imgInfo) int {
 	var (
 		bboxx  float64 = imginfo.Trans.Bb[0] + imginfo.Lmar + imginfo.Rmar
 		bboxy  float64 = imginfo.Trans.Bb[1] + imginfo.Tmar + imginfo.Bmar
@@ -265,7 +265,7 @@ func page_svg(info *BackendInfo, fout *stdio.File, plist *Path, imginfo *ImgInfo
 	stdio.Fprintf(fout, " width=\"%fpt\" height=\"%fpt\" viewBox=\"0 0 %f %f\"\n", bboxx, bboxy, bboxx, bboxy)
 	stdio.Fprintf(fout, " preserveAspectRatio=\"xMidYMid meet\">\n")
 	stdio.Fprintf(fout, "<metadata>\n")
-	stdio.Fprintf(fout, "Created by potrace dev, written by Peter Selinger 2001-2017\n")
+	stdio.Fprintf(fout, "Created by potrace "+Version+", written by Peter Selinger 2001-2019\n")
 	stdio.Fprintf(fout, "</metadata>\n")
 	stdio.Fprintf(fout, "<g transform=\"")
 	if origx != 0 || origy != 0 {
@@ -287,7 +287,7 @@ func page_svg(info *BackendInfo, fout *stdio.File, plist *Path, imginfo *ImgInfo
 	fout.Flush()
 	return 0
 }
-func page_gimp(info *BackendInfo, fout *stdio.File, plist *Path, imginfo *ImgInfo) int {
+func page_gimp(info *RenderConf, fout *stdio.File, plist *Path, imginfo *imgInfo) int {
 	info.Opaque = false
 	info.Grouping = 0
 	return page_svg(info, fout, plist, imginfo)

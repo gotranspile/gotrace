@@ -1,17 +1,15 @@
 package gotrace
 
 import (
-	"github.com/gotranspile/cxgo/runtime/libc"
-	"github.com/gotranspile/cxgo/runtime/stdio"
 	"math"
 	"os"
 	"unsafe"
+
+	"github.com/gotranspile/cxgo/runtime/libc"
+	"github.com/gotranspile/cxgo/runtime/stdio"
 )
 
-const _POSIX_C_SOURCE = 200809
-const _NETBSD_SOURCE = 1
-
-type Config struct {
+type FileConfig struct {
 	Outfile     *byte
 	Infiles     **byte
 	Infilecount int
@@ -51,12 +49,12 @@ func lowpass(gm *Greymap, lambda float64) {
 		for x = 0; x < gm.W; x++ {
 			f = f*c + float64(gm.Map[int64(y)*int64(gm.Dy)+int64(x)])*d
 			g = g*c + f*d
-			gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(g)
+			gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(g)
 		}
 		for x = gm.W - 1; x >= 0; x-- {
 			f = f*c + float64(gm.Map[int64(y)*int64(gm.Dy)+int64(x)])*d
 			g = g*c + f*d
-			gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(g)
+			gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(g)
 		}
 		for x = 0; x < gm.W; x++ {
 			f = f * c
@@ -64,7 +62,7 @@ func lowpass(gm *Greymap, lambda float64) {
 			if f+g < 1/255.0 {
 				break
 			}
-			gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(float64(gm.Map[int64(y)*int64(gm.Dy)+int64(x)]) + g)
+			gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(float64(gm.Map[int64(y)*int64(gm.Dy)+int64(x)]) + g)
 		}
 	}
 	for x = 0; x < gm.W; x++ {
@@ -75,12 +73,12 @@ func lowpass(gm *Greymap, lambda float64) {
 		for y = 0; y < gm.H; y++ {
 			f = f*c + float64(gm.Map[int64(y)*int64(gm.Dy)+int64(x)])*d
 			g = g*c + f*d
-			gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(g)
+			gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(g)
 		}
 		for y = gm.H - 1; y >= 0; y-- {
 			f = f*c + float64(gm.Map[int64(y)*int64(gm.Dy)+int64(x)])*d
 			g = g*c + f*d
-			gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(g)
+			gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(g)
 		}
 		for y = 0; y < gm.H; y++ {
 			f = f * c
@@ -88,7 +86,7 @@ func lowpass(gm *Greymap, lambda float64) {
 			if f+g < 1/255.0 {
 				break
 			}
-			gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(float64(gm.Map[int64(y)*int64(gm.Dy)+int64(x)]) + g)
+			gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(float64(gm.Map[int64(y)*int64(gm.Dy)+int64(x)]) + g)
 		}
 	}
 }
@@ -112,7 +110,7 @@ func highpass(gm *Greymap, lambda float64) int {
 			f = float64(gm.Map[int64(y)*int64(gm.Dy)+int64(x)])
 			f -= float64(gm1.Map[int64(y)*int64(gm1.Dy)+int64(x)])
 			f += 128
-			gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(f)
+			gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(f)
 		}
 	}
 	gm_free(gm1)
@@ -139,9 +137,9 @@ func threshold(gm *Greymap, c float64) *Bitmap {
 		for x = 0; x < w; x++ {
 			p = float64(gm.Map[int64(y)*int64(gm.Dy)+int64(x)])
 			if p < c1 {
-				bm_out.Map[int64(y)*int64(bm_out.Dy)+int64(x/(8*(int(unsafe.Sizeof(Word(0))))))] |= Word((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> (x & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)))
+				bm_out.Map[int64(y)*int64(bm_out.Dy)+int64(x/(8*(int(sizeofWord))))] |= Word((1 << ((8 * (int(sizeofWord))) - 1)) >> (x & ((8 * (int(sizeofWord))) - 1)))
 			} else {
-				bm_out.Map[int64(y)*int64(bm_out.Dy)+int64(x/(8*(int(unsafe.Sizeof(Word(0))))))] &= Word(^((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> (x & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1))))
+				bm_out.Map[int64(y)*int64(bm_out.Dy)+int64(x/(8*(int(sizeofWord))))] &= Word(^((1 << ((8 * (int(sizeofWord))) - 1)) >> (x & ((8 * (int(sizeofWord))) - 1))))
 			}
 		}
 	}
@@ -273,9 +271,9 @@ func interpolate_linear(gm *Greymap, s int, bilevel int, c float64) unsafe.Point
 					for x = 0; x < s; x++ {
 						for y = 0; y < s; y++ {
 							if true {
-								bm_out.Map[int64(j*s+y)*int64(bm_out.Dy)+int64((i*s+x)/(8*(int(unsafe.Sizeof(Word(0))))))] |= Word((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> ((i*s + x) & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)))
+								bm_out.Map[int64(j*s+y)*int64(bm_out.Dy)+int64((i*s+x)/(8*(int(sizeofWord))))] |= Word((1 << ((8 * (int(sizeofWord))) - 1)) >> ((i*s + x) & ((8 * (int(sizeofWord))) - 1)))
 							} else {
-								bm_out.Map[int64(j*s+y)*int64(bm_out.Dy)+int64((i*s+x)/(8*(int(unsafe.Sizeof(Word(0))))))] &= Word(^((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> ((i*s + x) & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1))))
+								bm_out.Map[int64(j*s+y)*int64(bm_out.Dy)+int64((i*s+x)/(8*(int(sizeofWord))))] &= Word(^((1 << ((8 * (int(sizeofWord))) - 1)) >> ((i*s + x) & ((8 * (int(sizeofWord))) - 1))))
 							}
 						}
 					}
@@ -294,12 +292,12 @@ func interpolate_linear(gm *Greymap, s int, bilevel int, c float64) unsafe.Point
 					av = p0*(1-yy) + p1*yy
 					if bilevel != 0 {
 						if av < c1 {
-							bm_out.Map[int64(j*s+y)*int64(bm_out.Dy)+int64((i*s+x)/(8*(int(unsafe.Sizeof(Word(0))))))] |= Word((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> ((i*s + x) & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)))
+							bm_out.Map[int64(j*s+y)*int64(bm_out.Dy)+int64((i*s+x)/(8*(int(sizeofWord))))] |= Word((1 << ((8 * (int(sizeofWord))) - 1)) >> ((i*s + x) & ((8 * (int(sizeofWord))) - 1)))
 						} else {
-							bm_out.Map[int64(j*s+y)*int64(bm_out.Dy)+int64((i*s+x)/(8*(int(unsafe.Sizeof(Word(0))))))] &= Word(^((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> ((i*s + x) & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1))))
+							bm_out.Map[int64(j*s+y)*int64(bm_out.Dy)+int64((i*s+x)/(8*(int(sizeofWord))))] &= Word(^((1 << ((8 * (int(sizeofWord))) - 1)) >> ((i*s + x) & ((8 * (int(sizeofWord))) - 1))))
 						}
 					} else {
-						gm_out.Map[int64(j*s+y)*int64(gm_out.Dy)+int64(i*s+x)] = gm_sample_t(av)
+						gm_out.Map[int64(j*s+y)*int64(gm_out.Dy)+int64(i*s+x)] = Sample(av)
 					}
 				}
 			}
@@ -409,15 +407,15 @@ func interpolate_cubic(gm *Greymap, s int, bilevel int, c float64) unsafe.Pointe
 					if bilevel != 0 {
 						if (x*s+l) >= 0 && (x*s+l) < bm_out.W && ((y*s+k) >= 0 && (y*s+k) < bm_out.H) {
 							if v < c1 {
-								bm_out.Map[int64(y*s+k)*int64(bm_out.Dy)+int64((x*s+l)/(8*(int(unsafe.Sizeof(Word(0))))))] |= Word((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> ((x*s + l) & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)))
+								bm_out.Map[int64(y*s+k)*int64(bm_out.Dy)+int64((x*s+l)/(8*(int(sizeofWord))))] |= Word((1 << ((8 * (int(sizeofWord))) - 1)) >> ((x*s + l) & ((8 * (int(sizeofWord))) - 1)))
 							} else {
-								bm_out.Map[int64(y*s+k)*int64(bm_out.Dy)+int64((x*s+l)/(8*(int(unsafe.Sizeof(Word(0))))))] &= Word(^((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> ((x*s + l) & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1))))
+								bm_out.Map[int64(y*s+k)*int64(bm_out.Dy)+int64((x*s+l)/(8*(int(sizeofWord))))] &= Word(^((1 << ((8 * (int(sizeofWord))) - 1)) >> ((x*s + l) & ((8 * (int(sizeofWord))) - 1))))
 							}
 						} else {
 						}
 					} else {
 						if (x*s+l) >= 0 && (x*s+l) < gm_out.W && (y*s+k) >= 0 && (y*s+k) < gm_out.H {
-							gm_out.Map[int64(y*s+k)*int64(gm_out.Dy)+int64(x*s+l)] = gm_sample_t(v)
+							gm_out.Map[int64(y*s+k)*int64(gm_out.Dy)+int64(x*s+l)] = Sample(v)
 						} else {
 						}
 					}
@@ -474,7 +472,7 @@ calloc_error:
 
 	return nil
 }
-func ProcessFile(info *Config, fin *stdio.File, fout *stdio.File, infile *byte, outfile *byte) {
+func processFile(info *FileConfig, fin *stdio.File, fout *stdio.File, infile *byte, outfile *byte) {
 	var (
 		r     int
 		gm    *Greymap

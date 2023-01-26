@@ -1,10 +1,11 @@
 package gotrace
 
 import (
-	"github.com/gotranspile/cxgo/runtime/libc"
-	"github.com/gotranspile/cxgo/runtime/stdio"
 	"math"
 	"unsafe"
+
+	"github.com/gotranspile/cxgo/runtime/libc"
+	"github.com/gotranspile/cxgo/runtime/stdio"
 )
 
 const GM_MODE_NONZERO = 1
@@ -12,13 +13,13 @@ const GM_MODE_ODD = 2
 const GM_MODE_POSITIVE = 3
 const GM_MODE_NEGATIVE = 4
 
-type gm_sample_t int16
+type Sample int16
 type Greymap struct {
 	W    int
 	H    int
 	Dy   int
-	Base []gm_sample_t
-	Map  []gm_sample_t
+	Base []Sample
+	Map  []Sample
 }
 
 func gm_getsize(dy int, h int) int64 {
@@ -26,8 +27,8 @@ func gm_getsize(dy int, h int) int64 {
 	if dy < 0 {
 		dy = -dy
 	}
-	size = int64(dy) * int64(h) * int64(unsafe.Sizeof(gm_sample_t(0)))
-	if size < 0 || h != 0 && dy != 0 && size/int64(h)/int64(dy) != int64(unsafe.Sizeof(gm_sample_t(0))) {
+	size = int64(dy) * int64(h) * int64(unsafe.Sizeof(Sample(0)))
+	if size < 0 || h != 0 && dy != 0 && size/int64(h)/int64(dy) != int64(unsafe.Sizeof(Sample(0))) {
 		return -1
 	}
 	return size
@@ -47,7 +48,7 @@ func NewGreymap(w int, h int) *Greymap {
 		return nil
 	}
 	if size == 0 {
-		size = 1
+		size = int64(unsafe.Sizeof(Sample(0)))
 	}
 	gm = new(Greymap)
 	if gm == nil {
@@ -56,7 +57,7 @@ func NewGreymap(w int, h int) *Greymap {
 	gm.W = w
 	gm.H = h
 	gm.Dy = dy
-	gm.Base = make([]gm_sample_t, uintptr(size)/unsafe.Sizeof(gm_sample_t(0)))
+	gm.Base = make([]Sample, uintptr(size)/unsafe.Sizeof(Sample(0)))
 	if gm.Base == nil {
 
 		return nil
@@ -79,7 +80,7 @@ func gm_dup(gm *Greymap) *Greymap {
 		return nil
 	}
 	for y = 0; y < gm.H; y++ {
-		libc.MemCpy(unsafe.Pointer(&gm1.Map[int64(y)*int64(gm1.Dy)]), unsafe.Pointer(&gm.Map[int64(y)*int64(gm.Dy)]), int(uint64(gm1.Dy)*uint64(unsafe.Sizeof(gm_sample_t(0)))))
+		libc.MemCpy(unsafe.Pointer(&gm1.Map[int64(y)*int64(gm1.Dy)]), unsafe.Pointer(&gm.Map[int64(y)*int64(gm.Dy)]), int(uint64(gm1.Dy)*uint64(unsafe.Sizeof(Sample(0)))))
 	}
 	return gm1
 }
@@ -94,7 +95,7 @@ func gm_clear(gm *Greymap, b int) {
 	} else {
 		for y = 0; y < gm.H; y++ {
 			for x = 0; x < gm.W; x++ {
-				gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(b)
+				gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(b)
 			}
 		}
 	}
@@ -103,7 +104,7 @@ func gm_resize(gm *Greymap, h int) int {
 	var (
 		dy      int = gm.Dy
 		newsize int64
-		newbase []gm_sample_t
+		newbase []Sample
 	)
 	if dy < 0 {
 		gm_flip(gm)
@@ -114,15 +115,15 @@ func gm_resize(gm *Greymap, h int) int {
 		goto error
 	}
 	if newsize == 0 {
-		newsize = 1
+		newsize = int64(unsafe.Sizeof(Sample(0)))
 	}
-	newbase = make([]gm_sample_t, uintptr(newsize)/unsafe.Sizeof(gm_sample_t(0)))
+	newbase = make([]Sample, uintptr(newsize)/unsafe.Sizeof(Sample(0)))
 	copy(newbase, gm.Base)
 	if newbase == nil {
 		goto error
 	}
-	gm.Base = []gm_sample_t(newbase)
-	gm.Map = []gm_sample_t(newbase)
+	gm.Base = []Sample(newbase)
+	gm.Map = []Sample(newbase)
 	gm.H = h
 	if dy < 0 {
 		gm_flip(gm)
@@ -212,7 +213,7 @@ func gm_readbody_pnm(f *stdio.File, gmp **Greymap, magic int) int {
 				if b < 0 {
 					goto eof
 				}
-				gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(b * math.MaxUint8 / max)
+				gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(b * math.MaxUint8 / max)
 			}
 		}
 	case '3':
@@ -231,7 +232,7 @@ func gm_readbody_pnm(f *stdio.File, gmp **Greymap, magic int) int {
 					}
 					sum += b
 				}
-				gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(sum * (math.MaxUint8 / 3) / max)
+				gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(sum * (math.MaxUint8 / 3) / max)
 			}
 		}
 	case '4':
@@ -283,7 +284,7 @@ func gm_readbody_pnm(f *stdio.File, gmp **Greymap, magic int) int {
 					}
 					b |= b1
 				}
-				gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(b * math.MaxUint8 / max)
+				gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(b * math.MaxUint8 / max)
 			}
 		}
 	case '6':
@@ -314,7 +315,7 @@ func gm_readbody_pnm(f *stdio.File, gmp **Greymap, magic int) int {
 					}
 					sum += b
 				}
-				gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(sum * (math.MaxUint8 / 3) / max)
+				gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(sum * (math.MaxUint8 / 3) / max)
 			}
 		}
 	}
@@ -509,12 +510,12 @@ func gm_readbody_bmp(f *stdio.File, gmp **Greymap) int {
 					if int(i*8+j) >= 0 && int(i*8+j) < gm.W && int(y) >= 0 && int(y) < gm.H {
 						if b&(0x80>>j) != 0 {
 							if 1 < bmpinfo.Ncolors {
-								gm.Map[int64(y)*int64(gm.Dy)+int64(i*8+j)] = gm_sample_t(*(*int)(unsafe.Add(unsafe.Pointer(coltable), unsafe.Sizeof(int(0))*1)))
+								gm.Map[int64(y)*int64(gm.Dy)+int64(i*8+j)] = Sample(*(*int)(unsafe.Add(unsafe.Pointer(coltable), unsafe.Sizeof(int(0))*1)))
 							} else {
 								gm.Map[int64(y)*int64(gm.Dy)+int64(i*8+j)] = 0
 							}
 						} else if 0 < bmpinfo.Ncolors {
-							gm.Map[int64(y)*int64(gm.Dy)+int64(i*8+j)] = gm_sample_t(*(*int)(unsafe.Add(unsafe.Pointer(coltable), unsafe.Sizeof(int(0))*0)))
+							gm.Map[int64(y)*int64(gm.Dy)+int64(i*8+j)] = Sample(*(*int)(unsafe.Add(unsafe.Pointer(coltable), unsafe.Sizeof(int(0))*0)))
 						} else {
 							gm.Map[int64(y)*int64(gm.Dy)+int64(i*8+j)] = 0
 						}
@@ -556,7 +557,7 @@ func gm_readbody_bmp(f *stdio.File, gmp **Greymap) int {
 				bitbuf <<= bmpinfo.Bits
 				n -= bmpinfo.Bits
 				if b < bmpinfo.Ncolors {
-					gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(*(*int)(unsafe.Add(unsafe.Pointer(coltable), unsafe.Sizeof(int(0))*uintptr(b))))
+					gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(*(*int)(unsafe.Add(unsafe.Pointer(coltable), unsafe.Sizeof(int(0))*uintptr(b))))
 				} else {
 					gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = 0
 				}
@@ -579,7 +580,7 @@ func gm_readbody_bmp(f *stdio.File, gmp **Greymap) int {
 					goto eof
 				}
 				c = ((c >> 16) & math.MaxUint8) + ((c >> 8) & math.MaxUint8) + (c & math.MaxUint8)
-				gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(uint16(c / 3))
+				gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(uint16(c / 3))
 			}
 			if bmp_pad(f) != 0 {
 				goto try_error
@@ -597,7 +598,7 @@ func gm_readbody_bmp(f *stdio.File, gmp **Greymap) int {
 					goto eof
 				}
 				c = ((c & bmpinfo.RedMask) >> redshift) + ((c & bmpinfo.GreenMask) >> greenshift) + ((c & bmpinfo.BlueMask) >> blueshift)
-				gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(uint16(c / 3))
+				gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(uint16(c / 3))
 			}
 			if bmp_pad(f) != 0 {
 				goto try_error
@@ -634,7 +635,7 @@ func gm_readbody_bmp(f *stdio.File, gmp **Greymap) int {
 					}
 					realheight = int(y + 1)
 					if int(x) >= 0 && int(x) < gm.W && int(y) >= 0 && int(y) < gm.H {
-						gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(col[i&1])
+						gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(col[i&1])
 					} else {
 					}
 					x++
@@ -670,7 +671,7 @@ func gm_readbody_bmp(f *stdio.File, gmp **Greymap) int {
 					realheight = int(y + 1)
 					if int(x) >= 0 && int(x) < gm.W && int(y) >= 0 && int(y) < gm.H {
 						if ((b >> (4 - (i&1)*4)) & 0xF) < bmpinfo.Ncolors {
-							gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(*(*int)(unsafe.Add(unsafe.Pointer(coltable), unsafe.Sizeof(int(0))*uintptr((b>>(4-(i&1)*4))&0xF))))
+							gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(*(*int)(unsafe.Add(unsafe.Pointer(coltable), unsafe.Sizeof(int(0))*uintptr((b>>(4-(i&1)*4))&0xF))))
 						} else {
 							gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = 0
 						}
@@ -707,7 +708,7 @@ func gm_readbody_bmp(f *stdio.File, gmp **Greymap) int {
 					realheight = int(y + 1)
 					if int(x) >= 0 && int(x) < gm.W && int(y) >= 0 && int(y) < gm.H {
 						if c < bmpinfo.Ncolors {
-							gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(*(*int)(unsafe.Add(unsafe.Pointer(coltable), unsafe.Sizeof(int(0))*uintptr(c))))
+							gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(*(*int)(unsafe.Add(unsafe.Pointer(coltable), unsafe.Sizeof(int(0))*uintptr(c))))
 						} else {
 							gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = 0
 						}
@@ -744,7 +745,7 @@ func gm_readbody_bmp(f *stdio.File, gmp **Greymap) int {
 					realheight = int(y + 1)
 					if int(x) >= 0 && int(x) < gm.W && int(y) >= 0 && int(y) < gm.H {
 						if b < bmpinfo.Ncolors {
-							gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = gm_sample_t(*(*int)(unsafe.Add(unsafe.Pointer(coltable), unsafe.Sizeof(int(0))*uintptr(b))))
+							gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = Sample(*(*int)(unsafe.Add(unsafe.Pointer(coltable), unsafe.Sizeof(int(0))*uintptr(b))))
 						} else {
 							gm.Map[int64(y)*int64(gm.Dy)+int64(x)] = 0
 						}
@@ -779,7 +780,6 @@ eof:
 	return 1
 format_error:
 try_error:
-	;
 
 	gm_free(gm)
 	if gm_read_error == nil {

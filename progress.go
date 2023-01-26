@@ -2,7 +2,7 @@ package gotrace
 
 import "unsafe"
 
-type progress_s struct {
+type progress struct {
 	Callback func(progress float64, privdata unsafe.Pointer)
 	Data     unsafe.Pointer
 	Min      float64
@@ -11,9 +11,8 @@ type progress_s struct {
 	B        float64
 	D_prev   float64
 }
-type progress_t progress_s
 
-func progress_update(d float64, prog *progress_t) {
+func progress_update(d float64, prog *progress) {
 	var d_scaled float64
 	if prog != nil && prog.Callback != nil {
 		d_scaled = prog.Min*(1-d) + prog.Max*d
@@ -23,7 +22,7 @@ func progress_update(d float64, prog *progress_t) {
 		}
 	}
 }
-func progress_subrange_start(a float64, b float64, prog *progress_t, sub *progress_t) {
+func progress_subrange_start(a float64, b float64, prog *progress, sub *progress) {
 	var (
 		min float64
 		max float64
@@ -47,7 +46,7 @@ func progress_subrange_start(a float64, b float64, prog *progress_t, sub *progre
 	sub.D_prev = prog.D_prev
 	return
 }
-func progress_subrange_end(prog *progress_t, sub *progress_t) {
+func progress_subrange_end(prog *progress, sub *progress) {
 	if prog != nil && prog.Callback != nil {
 		if sub.Callback == nil {
 			progress_update(sub.B, prog)

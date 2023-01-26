@@ -1,37 +1,35 @@
 package gotrace
 
 import (
-	"github.com/gotranspile/cxgo/runtime/libc"
 	"unsafe"
 )
 
-const POTRACE_TURNPOLICY_BLACK = 0
-const POTRACE_TURNPOLICY_WHITE = 1
-const POTRACE_TURNPOLICY_LEFT = 2
-const POTRACE_TURNPOLICY_RIGHT = 3
-const POTRACE_TURNPOLICY_MINORITY = 4
-const POTRACE_TURNPOLICY_MAJORITY = 5
-const POTRACE_TURNPOLICY_RANDOM = 6
+const TurnBlack = 0
+const TurnWhite = 1
+const TurnLeft = 2
+const TurnRight = 3
+const TurnMinority = 4
+const TurnMajority = 5
+const TurnRandom = 6
 const POTRACE_CURVETO = 1
 const POTRACE_CORNER = 2
-const POTRACE_STATUS_OK = 0
-const POTRACE_STATUS_INCOMPLETE = 1
+const statusOK = 0
+const statusIncomplete = 1
 
-type potrace_progress_s struct {
+type Progress struct {
 	Callback func(progress float64, privdata unsafe.Pointer)
 	Data     unsafe.Pointer
 	Min      float64
 	Max      float64
 	Epsilon  float64
 }
-type potrace_progress_t potrace_progress_s
-type Param struct {
-	Turdsize     int
-	Turnpolicy   int
-	Alphamax     float64
-	Opticurve    bool
-	Opttolerance float64
-	Progress     potrace_progress_t
+type Config struct {
+	TurdSize     int
+	TurnPolicy   int
+	AlphaMax     float64
+	OptiCurve    bool
+	OptTolerance float64
+	Progress     Progress
 }
 type Word uint
 type Bitmap struct {
@@ -58,30 +56,30 @@ type Path struct {
 	Sibling   *Path
 	Priv      *potrace_privpath_s
 }
-type State struct {
+type traceState struct {
 	Status int
 	Plist  *Path
 	Priv   *potrace_privstate_s
 }
 
-var param_default Param = Param{Turdsize: 2, Turnpolicy: POTRACE_TURNPOLICY_MINORITY, Alphamax: 1.0, Opticurve: true, Opttolerance: 0.2, Progress: potrace_progress_t{Callback: nil, Data: nil, Min: 0.0, Max: 1.0, Epsilon: 0.0}}
+var param_default Config = Config{TurdSize: 2, TurnPolicy: TurnMinority, AlphaMax: 1.0, OptiCurve: true, OptTolerance: 0.2, Progress: Progress{Callback: nil, Data: nil, Min: 0.0, Max: 1.0, Epsilon: 0.0}}
 
-func ParamDefault() *Param {
-	var p *Param
-	p = new(Param)
+func DefaultConfig() *Config {
+	var p *Config
+	p = new(Config)
 	if p == nil {
 		return nil
 	}
-	libc.MemCpy(unsafe.Pointer(p), unsafe.Pointer(&param_default), int(unsafe.Sizeof(Param{})))
+	*p = param_default
 	return p
 }
-func Trace(param *Param, bm *Bitmap) *State {
+func traceBitmap(param *Config, bm *Bitmap) *traceState {
 	var (
 		r       int
 		plist   *Path = nil
-		st      *State
-		prog    progress_t
-		subprog progress_t
+		st      *traceState
+		prog    progress
+		subprog progress
 	)
 	prog.Callback = param.Progress.Callback
 	prog.Data = param.Progress.Data
@@ -89,7 +87,7 @@ func Trace(param *Param, bm *Bitmap) *State {
 	prog.Max = param.Progress.Max
 	prog.Epsilon = param.Progress.Epsilon
 	prog.D_prev = param.Progress.Min
-	st = new(State)
+	st = new(traceState)
 	if st == nil {
 		return nil
 	}
@@ -99,25 +97,15 @@ func Trace(param *Param, bm *Bitmap) *State {
 
 		return nil
 	}
-	st.Status = POTRACE_STATUS_OK
+	st.Status = statusOK
 	st.Plist = plist
 	st.Priv = nil
 	progress_subrange_end(&prog, &subprog)
 	progress_subrange_start(0.1, 1.0, &prog, &subprog)
 	r = process_path(plist, param, &subprog)
 	if r != 0 {
-		st.Status = POTRACE_STATUS_INCOMPLETE
+		st.Status = statusIncomplete
 	}
 	progress_subrange_end(&prog, &subprog)
 	return st
-}
-func potrace_state_free(st *State) {
-	pathlist_free(st.Plist)
-
-}
-func potrace_param_free(p *Param) {
-
-}
-func potrace_version() *byte {
-	return libc.CString("potracelib dev")
 }

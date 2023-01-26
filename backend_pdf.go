@@ -7,43 +7,44 @@ import (
 	"unsafe"
 )
 
-type color_t int
+type pdfColor int
 type intarray_s struct {
 	Size int
-	Data *int
+	Data []int
 }
-type intarray_t intarray_s
 
-func intarray_init(ar *intarray_t) {
+func intarray_init(ar *intarray_s) {
 	ar.Size = 0
 	ar.Data = nil
 }
-func intarray_term(ar *intarray_t) {
+func intarray_term(ar *intarray_s) {
 
 	ar.Size = 0
 	ar.Data = nil
 }
-func intarray_set(ar *intarray_t, n int, val int) int {
+func intarray_set(ar *intarray_s, n int, val int) int {
 	var (
-		p *int
+		p []int
 		s int
 	)
 	if n >= ar.Size {
 		s = n + 1024
-		p = (*int)(libc.Realloc(unsafe.Pointer(ar.Data), s*int(unsafe.Sizeof(int(0)))))
+		old := p
+		p = make([]int, s)
+		copy(p, old)
 		if p == nil {
 			return -1
 		}
-		ar.Data = p
+		ar.Data = []int(p)
 		ar.Size = s
 	}
-	*(*int)(unsafe.Add(unsafe.Pointer(ar.Data), unsafe.Sizeof(int(0))*uintptr(n))) = val
+	ar.Data[n] = val
 	return 0
 }
 
-var xref intarray_t
+var xref intarray_s
 var nxref int = 0
-var pages intarray_t
+var pages intarray_s
 var npages int
 var streamofs int
 var outcount uint64
@@ -74,33 +75,33 @@ func shipclear(fmt *byte, _rest ...interface{}) int {
 	outcount += uint64(xship(xship_file, 0, &buf[0], libc.StrLen(&buf[0])))
 	return 0
 }
-func pdf_callbacks(info *BackendInfo, fout *stdio.File) {
-	if info.Compress != 0 {
+func pdf_callbacks(info *RenderConf, fout *stdio.File) {
+	if info.Compress {
 		xship = pdf_xship
 	} else {
 		xship = dummy_xship
 	}
 	xship_file = fout
 }
-func pdf_unit(info *BackendInfo, p DPoint) Point {
+func pdf_unit(info *RenderConf, p DPoint) Point {
 	var q Point
 	q.X = int(math.Floor(p.X*info.Unit + 0.5))
 	q.Y = int(math.Floor(p.Y*info.Unit + 0.5))
 	return q
 }
-func pdf_coords(info *BackendInfo, p DPoint) {
+func pdf_coords(info *RenderConf, p DPoint) {
 	var cur Point = pdf_unit(info, p)
 	pdf_ship(libc.CString("%ld %ld "), cur.X, cur.Y)
 }
-func pdf_moveto(info *BackendInfo, p DPoint) {
+func pdf_moveto(info *RenderConf, p DPoint) {
 	pdf_coords(info, p)
 	pdf_ship(libc.CString("m\n"))
 }
-func pdf_lineto(info *BackendInfo, p DPoint) {
+func pdf_lineto(info *RenderConf, p DPoint) {
 	pdf_coords(info, p)
 	pdf_ship(libc.CString("l\n"))
 }
-func pdf_curveto(info *BackendInfo, p1 DPoint, p2 DPoint, p3 DPoint) {
+func pdf_curveto(info *RenderConf, p1 DPoint, p2 DPoint, p3 DPoint) {
 	var (
 		q1 Point
 		q2 Point
@@ -111,7 +112,7 @@ func pdf_curveto(info *BackendInfo, p1 DPoint, p2 DPoint, p3 DPoint) {
 	q3 = pdf_unit(info, p3)
 	pdf_ship(libc.CString("%ld %ld %ld %ld %ld %ld c\n"), q1.X, q1.Y, q2.X, q2.Y, q3.X, q3.Y)
 }
-func pdf_colorstring(col color_t) *byte {
+func pdf_colorstring(col pdfColor) *byte {
 	var (
 		r   float64
 		g   float64
@@ -134,16 +135,16 @@ func pdf_colorstring(col color_t) *byte {
 	}
 }
 
-var pdf_color color_t = -1
+var pdf_color pdfColor = -1
 
-func pdf_setcolor(col color_t) {
+func pdf_setcolor(col pdfColor) {
 	if col == pdf_color {
 		return
 	}
 	pdf_color = col
 	pdf_ship(libc.CString("%s\n"), pdf_colorstring(col))
 }
-func pdf_path(info *BackendInfo, curve *Curve) int {
+func pdf_path(info *RenderConf, curve *Curve) int {
 	var (
 		i int
 		c *DPoint
@@ -163,9 +164,9 @@ func pdf_path(info *BackendInfo, curve *Curve) int {
 	}
 	return 0
 }
-func render0(info *BackendInfo, plist *Path) int {
+func render0(info *RenderConf, plist *Path) int {
 	var p *Path
-	pdf_setcolor(color_t(info.Color))
+	pdf_setcolor(pdfColor(info.Color))
 	for p = plist; p != nil; p = p.Next {
 		pdf_path(info, &p.Curve)
 		pdf_ship(libc.CString("h\n"))
@@ -175,12 +176,12 @@ func render0(info *BackendInfo, plist *Path) int {
 	}
 	return 0
 }
-func render0_opaque(info *BackendInfo, plist *Path) int {
+func render0_opaque(info *RenderConf, plist *Path) int {
 	var p *Path
 	for p = plist; p != nil; p = p.Next {
 		pdf_path(info, &p.Curve)
 		pdf_ship(libc.CString("h\n"))
-		pdf_setcolor(color_t(func() int {
+		pdf_setcolor(pdfColor(func() int {
 			if p.Sign == '+' {
 				return info.Color
 			}
@@ -190,13 +191,13 @@ func render0_opaque(info *BackendInfo, plist *Path) int {
 	}
 	return 0
 }
-func pdf_render(info *BackendInfo, plist *Path) int {
+func pdf_render(info *RenderConf, plist *Path) int {
 	if info.Opaque {
 		return render0_opaque(info, plist)
 	}
 	return render0(info, plist)
 }
-func init_pdf(info *BackendInfo, fout *stdio.File) int {
+func init_pdf(info *RenderConf, fout *stdio.File) int {
 	intarray_init(&xref)
 	intarray_init(&pages)
 	nxref = 0
@@ -221,14 +222,14 @@ func init_pdf(info *BackendInfo, fout *stdio.File) int {
 	}(), int(outcount)) != 0 {
 		goto try_error
 	}
-	shipclear(libc.CString("2 0 obj\n<</Creator(potrace dev, written by Peter Selinger 2001-2017)>>\nendobj\n"))
+	shipclear(libc.CString("2 0 obj\n<</Creator(potrace " + Version + ", written by Peter Selinger 2001-2019)>>\nendobj\n"))
 	nxref++
 	fout.Flush()
 	return 0
 try_error:
 	return 1
 }
-func term_pdf(info *BackendInfo, fout *stdio.File) int {
+func term_pdf(info *RenderConf, fout *stdio.File) int {
 	var (
 		startxref int
 		i         int
@@ -239,14 +240,14 @@ func term_pdf(info *BackendInfo, fout *stdio.File) int {
 	}
 	shipclear(libc.CString("3 0 obj\n<</Type/Pages/Count %d/Kids[\n"), npages)
 	for i = 0; i < npages; i++ {
-		shipclear(libc.CString("%d 0 R\n"), *(*int)(unsafe.Add(unsafe.Pointer(pages.Data), unsafe.Sizeof(int(0))*uintptr(i))))
+		shipclear(libc.CString("%d 0 R\n"), pages.Data[i])
 	}
 	shipclear(libc.CString("]>>\nendobj\n"))
 	startxref = int(outcount)
 	shipclear(libc.CString("xref\n0 %d\n"), nxref+1)
 	shipclear(libc.CString("0000000000 65535 f \n"))
 	for i = 0; i < nxref; i++ {
-		shipclear(libc.CString("%0.10d 00000 n \n"), *(*int)(unsafe.Add(unsafe.Pointer(xref.Data), unsafe.Sizeof(int(0))*uintptr(i))))
+		shipclear(libc.CString("%0.10d 00000 n \n"), xref.Data[i])
 	}
 	shipclear(libc.CString("trailer\n<</Size %d/Root 1 0 R/Info 2 0 R>>\n"), nxref+1)
 	shipclear(libc.CString("startxref\n%d\n%%%%EOF\n"), startxref)
@@ -257,7 +258,7 @@ func term_pdf(info *BackendInfo, fout *stdio.File) int {
 try_error:
 	return 1
 }
-func pdf_pageinit(info *BackendInfo, imginfo *ImgInfo, largebbox int) int {
+func pdf_pageinit(info *RenderConf, imginfo *imgInfo, largebbox int) int {
 	var (
 		origx float64 = imginfo.Trans.Orig[0] + imginfo.Lmar
 		origy float64 = imginfo.Trans.Orig[1] + imginfo.Bmar
@@ -303,7 +304,7 @@ func pdf_pageinit(info *BackendInfo, imginfo *ImgInfo, largebbox int) int {
 		goto try_error
 	}
 	shipclear(libc.CString("%d 0 obj\n"), nxref)
-	if info.Compress != 0 {
+	if info.Compress {
 		shipclear(libc.CString("<</Filter/FlateDecode/Length %d 0 R>>\n"), nxref+1)
 	} else {
 		shipclear(libc.CString("<</Length %d 0 R>>\n"), nxref+1)
@@ -333,7 +334,7 @@ func pdf_pageterm() int {
 try_error:
 	return 1
 }
-func page_pdf(info *BackendInfo, fout *stdio.File, plist *Path, imginfo *ImgInfo) int {
+func page_pdf(info *RenderConf, fout *stdio.File, plist *Path, imginfo *imgInfo) int {
 	var r int
 	pdf_callbacks(info, fout)
 	if pdf_pageinit(info, imginfo, 0) != 0 {
@@ -351,7 +352,7 @@ func page_pdf(info *BackendInfo, fout *stdio.File, plist *Path, imginfo *ImgInfo
 try_error:
 	return 1
 }
-func page_pdfpage(info *BackendInfo, fout *stdio.File, plist *Path, imginfo *ImgInfo) int {
+func page_pdfpage(info *RenderConf, fout *stdio.File, plist *Path, imginfo *imgInfo) int {
 	var r int
 	pdf_callbacks(info, fout)
 	if pdf_pageinit(info, imginfo, 1) != 0 {

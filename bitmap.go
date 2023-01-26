@@ -10,8 +10,8 @@ func getsize(dy int, h int) int64 {
 	if dy < 0 {
 		dy = -dy
 	}
-	size = int64(dy) * int64(h) * int64(int(unsafe.Sizeof(Word(0))))
-	if size < 0 || h != 0 && dy != 0 && size/int64(h)/int64(dy) != int64(int(unsafe.Sizeof(Word(0)))) {
+	size = int64(dy) * int64(h) * int64(int(sizeofWord))
+	if size < 0 || h != 0 && dy != 0 && size/int64(h)/int64(dy) != int64(int(sizeofWord)) {
 		return -1
 	}
 	return size
@@ -41,7 +41,7 @@ func NewBitmap(w int, h int) *Bitmap {
 	if w == 0 {
 		dy = 0
 	} else {
-		dy = (w-1)/(8*(int(unsafe.Sizeof(Word(0))))) + 1
+		dy = (w-1)/(8*(int(sizeofWord))) + 1
 	}
 	var size int64
 	size = getsize(dy, h)
@@ -50,7 +50,7 @@ func NewBitmap(w int, h int) *Bitmap {
 		return nil
 	}
 	if size == 0 {
-		size = 1
+		size = int64(int(sizeofWord))
 	}
 	bm = new(Bitmap)
 	if bm == nil {
@@ -59,7 +59,7 @@ func NewBitmap(w int, h int) *Bitmap {
 	bm.W = w
 	bm.H = h
 	bm.Dy = dy
-	bm.Map = make([]Word, uintptr(size)/unsafe.Sizeof(Word(0)))
+	bm.Map = make([]Word, uintptr(size)/sizeofWord)
 	if bm.Map == nil {
 
 		return nil
@@ -84,7 +84,7 @@ func bm_dup(bm *Bitmap) *Bitmap {
 		return nil
 	}
 	for y = 0; y < bm.H; y++ {
-		libc.MemCpy(unsafe.Pointer(&bm1.Map[int64(y)*int64(bm1.Dy)]), unsafe.Pointer(&bm.Map[int64(y)*int64(bm.Dy)]), int(uint64(bm1.Dy)*uint64(int(unsafe.Sizeof(Word(0))))))
+		libc.MemCpy(unsafe.Pointer(&bm1.Map[int64(y)*int64(bm1.Dy)]), unsafe.Pointer(&bm.Map[int64(y)*int64(bm.Dy)]), int(uint64(bm1.Dy)*uint64(int(sizeofWord))))
 	}
 	return bm1
 }
@@ -101,7 +101,7 @@ func bm_invert(bm *Bitmap) {
 	for y = 0; y < bm.H; y++ {
 		p = &bm.Map[int64(y)*int64(bm.Dy)]
 		for i = 0; i < dy; i++ {
-			*(*Word)(unsafe.Add(unsafe.Pointer(p), unsafe.Sizeof(Word(0))*uintptr(i))) ^= ^Word(0)
+			*(*Word)(unsafe.Add(unsafe.Pointer(p), sizeofWord*uintptr(i))) ^= ^Word(0)
 		}
 	}
 }
@@ -120,9 +120,9 @@ func bm_resize(bm *Bitmap, h int) int {
 		goto error
 	}
 	if newsize == 0 {
-		newsize = 1
+		newsize = int64(int(sizeofWord))
 	}
-	newmap = make([]Word, uintptr(newsize)/unsafe.Sizeof(Word(0)))
+	newmap = make([]Word, uintptr(newsize)/sizeofWord)
 	copy(newmap, bm.Map)
 	if newmap == nil {
 		goto error

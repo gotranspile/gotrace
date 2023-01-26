@@ -6,7 +6,7 @@ import (
 	"unsafe"
 )
 
-type Trans struct {
+type transT struct {
 	Bb     [2]float64
 	Orig   [2]float64
 	X      [2]float64
@@ -15,13 +15,13 @@ type Trans struct {
 	Scaley float64
 }
 
-func trans(p DPoint, t Trans) DPoint {
+func trans(p DPoint, t transT) DPoint {
 	var res DPoint
 	res.X = t.Orig[0] + p.X*t.X[0] + p.Y*t.Y[0]
 	res.Y = t.Orig[1] + p.X*t.X[1] + p.Y*t.Y[1]
 	return res
 }
-func trans_rotate(r *Trans, alpha float64) {
+func trans_rotate(r *transT, alpha float64) {
 	var (
 		s        float64
 		c        float64
@@ -31,10 +31,10 @@ func trans_rotate(r *Trans, alpha float64) {
 		y1       float64
 		o0       float64
 		o1       float64
-		t_struct Trans
-		t        *Trans = &t_struct
+		t_struct transT
+		t        *transT = &t_struct
 	)
-	libc.MemCpy(unsafe.Pointer(t), unsafe.Pointer(r), int(unsafe.Sizeof(Trans{})))
+	libc.MemCpy(unsafe.Pointer(t), unsafe.Pointer(r), int(unsafe.Sizeof(transT{})))
 	s = math.Sin(alpha / 180 * math.Pi)
 	c = math.Cos(alpha / 180 * math.Pi)
 	x0 = c * t.Bb[0]
@@ -72,7 +72,7 @@ func trans_rotate(r *Trans, alpha float64) {
 	r.Y[0] = c*t.Y[0] - s*t.Y[1]
 	r.Y[1] = s*t.Y[0] + c*t.Y[1]
 }
-func trans_from_rect(r *Trans, w float64, h float64) {
+func trans_from_rect(r *transT, w float64, h float64) {
 	r.Bb[0] = w
 	r.Bb[1] = h
 	r.Orig[0] = 0.0
@@ -84,7 +84,7 @@ func trans_from_rect(r *Trans, w float64, h float64) {
 	r.Scalex = 1.0
 	r.Scaley = 1.0
 }
-func trans_rescale(r *Trans, sc float64) {
+func trans_rescale(r *transT, sc float64) {
 	r.Bb[0] *= sc
 	r.Bb[1] *= sc
 	r.Orig[0] *= sc
@@ -96,7 +96,7 @@ func trans_rescale(r *Trans, sc float64) {
 	r.Scalex *= sc
 	r.Scaley *= sc
 }
-func trans_scale_to_size(r *Trans, w float64, h float64) {
+func trans_scale_to_size(r *transT, w float64, h float64) {
 	var (
 		xsc float64 = w / r.Bb[0]
 		ysc float64 = h / r.Bb[1]
@@ -120,7 +120,7 @@ func trans_scale_to_size(r *Trans, w float64, h float64) {
 		r.Bb[1] = -h
 	}
 }
-func trans_tighten(r *Trans, plist *Path) {
+func trans_tighten(r *transT, plist *Path) {
 	var (
 		i   interval_t
 		dir DPoint

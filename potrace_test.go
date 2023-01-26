@@ -1,12 +1,14 @@
-package gotrace
+package gotrace_test
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"io"
-	"net/http"
 	"os"
+	"path/filepath"
 	"testing"
 
-	"github.com/gotranspile/cxgo/runtime/stdio"
+	"github.com/gotranspile/gotrace"
 )
 
 func checkErr(t testing.TB, err error) {
@@ -17,56 +19,33 @@ func checkErr(t testing.TB, err error) {
 }
 
 func TestPotrace(t *testing.T) {
-	resp, err := http.Get("https://potrace.sourceforge.net/img/stanford.pbm")
-	checkErr(t, err)
-	defer resp.Body.Close()
+	const dir = "./testdata/"
 
-	if resp.StatusCode != 200 {
-		t.Fatal(resp.Status)
+	bm, err := gotrace.BitmapReadFile(filepath.Join(dir, "stanford.pbm"), 0.5)
+	checkErr(t, err)
+
+	plist, err := gotrace.Trace(bm, nil)
+	checkErr(t, err)
+
+	bi := gotrace.NewRenderConf()
+	fname := filepath.Join(dir, "stanford.svg")
+	err = gotrace.RenderFile("svg", bi, fname, plist, bm.W, bm.H)
+	checkErr(t, err)
+	if h := hashFile(t, fname); h != "9aee25cf092f7228c4f14ba4607592487f4fab07" {
+		t.Errorf("unexpected hash for SVG: %s", h)
 	}
 
-	tfile, err := os.CreateTemp("", "potrace_")
+	fname = filepath.Join(dir, "stanford.pdf")
+	err = gotrace.RenderFile("pdf", bi, fname, plist, bm.W, bm.H)
 	checkErr(t, err)
-	defer func() {
-		_ = tfile.Close()
-		_ = os.Remove(tfile.Name())
-	}()
+}
 
-	_, err = io.Copy(tfile, resp.Body)
+func hashFile(t testing.TB, path string) string {
+	f, err := os.Open(path)
 	checkErr(t, err)
-	tfile.Seek(0, io.SeekStart)
-
-	var bm *Bitmap
-	e := BitmapRead(stdio.OpenFrom(tfile), 0.5, &bm)
-	if e != 0 {
-		t.Fatal(e)
-	}
-
-	p := ParamDefault()
-	st := Trace(p, bm)
-	if st.Status != 0 {
-		t.Fatal(st.Status)
-	}
-	var tr Trans
-	trans_from_rect(&tr, float64(bm.W), float64(bm.H))
-	bi := &BackendInfo{
-		Unit: 1,
-	}
-	iinfo := &ImgInfo{
-		Pixwidth: bm.W, Pixheight: bm.H,
-		Width: float64(bm.W), Height: float64(bm.H),
-		Trans: tr,
-	}
-
-	svgOut, err := os.Create("stanford.svg")
+	defer f.Close()
+	h := sha1.New()
+	_, err = io.Copy(h, f)
 	checkErr(t, err)
-	defer svgOut.Close()
-	page_svg(bi, stdio.OpenFrom(svgOut), st.Plist, iinfo)
-
-	pdfOut, err := os.Create("stanford.pdf")
-	checkErr(t, err)
-	defer pdfOut.Close()
-	init_pdf(bi, stdio.OpenFrom(pdfOut))
-	page_pdf(bi, stdio.OpenFrom(pdfOut), st.Plist, iinfo)
-	term_pdf(bi, stdio.OpenFrom(pdfOut))
+	return hex.EncodeToString(h.Sum(nil))
 }

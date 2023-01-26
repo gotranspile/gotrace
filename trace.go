@@ -6,8 +6,7 @@ import (
 	"unsafe"
 )
 
-const INFTY = 10000000
-const COS179 = 0
+const infty = 10000000
 
 func dorth_infty(p0 DPoint, p2 DPoint) Point {
 	var r Point
@@ -441,7 +440,7 @@ func calc_lon(pp *potrace_privpath_s) int {
 		b = xprod(constraint[0], dk)
 		c = xprod(constraint[1], cur)
 		d = xprod(constraint[1], dk)
-		j = INFTY
+		j = infty
 		if b < 0 {
 			j = floordiv(a, -b)
 		}
@@ -1206,7 +1205,7 @@ calloc_error:
 
 	return 1
 }
-func process_path(plist *Path, param *Param, progress *progress_t) int {
+func process_path(plist *Path, param *Config, progress *progress) int {
 	var (
 		p  *Path
 		nn float64 = 0
@@ -1235,9 +1234,9 @@ func process_path(plist *Path, param *Param, progress *progress_t) int {
 		if p.Sign == '-' {
 			reverse(&p.Priv.Curve)
 		}
-		smooth(&p.Priv.Curve, param.Alphamax)
-		if param.Opticurve {
-			if opticurve(p.Priv, param.Opttolerance) != 0 {
+		smooth(&p.Priv.Curve, param.AlphaMax)
+		if param.OptiCurve {
+			if opticurve(p.Priv, param.OptTolerance) != 0 {
 				goto try_error
 			}
 			p.Priv.Fcurve = &p.Priv.Ocurve

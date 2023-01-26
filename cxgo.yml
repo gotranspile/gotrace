@@ -1,5 +1,5 @@
 vcs: https://github.com/skyrpex/potrace.git
-branch: '1.15'
+branch: 'master'
 root: ./src
 out: .
 package: gotrace
@@ -19,22 +19,39 @@ idents:
   - name: bm_new
     rename: NewBitmap
   - name: bm_read
-    rename: BitmapRead
+    rename: bitmapRead
   - name: potrace_trace
-    rename: Trace
+    rename: traceBitmap
   - name: potrace_param_default
-    rename: ParamDefault
+    rename: DefaultConfig
   - name: potrace_word
     rename: Word
   - name: potrace_dpoint_s
     rename: DPoint
   - name: point_s
     rename: Point
+  - name: potrace_progress_t
+    alias: true
+  - name: potrace_progress_s
+    rename: Progress
+  - name: progress_t
+    alias: true
+  - name: progress_s
+    rename: progress
   - name: potrace_param_s
-    rename: Param
+    rename: Config
     fields:
+      - name: turdsize
+        rename: TurdSize
+      - name: turnpolicy
+        rename: TurnPolicy
+      - name: alphamax
+        rename: AlphaMax
       - name: opticurve
+        rename: OptiCurve
         type: bool
+      - name: opttolerance
+        rename: OptTolerance
   - name: potrace_curve_s
     rename: Curve
     fields:
@@ -60,7 +77,7 @@ idents:
   - name: potrace_path_s
     rename: Path
   - name: potrace_state_s
-    rename: State
+    rename: traceState
   - name: potrace_bitmap_s
     rename: Bitmap
     fields:
@@ -105,12 +122,14 @@ idents:
         type: slice
   - name: greymap_t
     alias: true
+  - name: gm_sample_t
+    rename: Sample
   - name: gm_new
     rename: NewGreymap
   - name: gm_read
     rename: GreymapRead
   - name: imginfo_s
-    rename: ImgInfo
+    rename: imgInfo
   - name: imginfo_t
     alias: true
   - name: dim_t
@@ -120,7 +139,7 @@ idents:
   - name: trans_t
     alias: true
   - name: trans_s
-    rename: Trans
+    rename: transT
   - name: path_t
     alias: true
   - name: privpath_t
@@ -131,8 +150,58 @@ idents:
     alias: true
   - name: dpoint3_t
     alias: true
+  - name: POTRACE_TURNPOLICY_BLACK
+    rename: TurnBlack
+  - name: POTRACE_TURNPOLICY_WHITE
+    rename: TurnWhite
+  - name: POTRACE_TURNPOLICY_LEFT
+    rename: TurnLeft
+  - name: POTRACE_TURNPOLICY_RIGHT
+    rename: TurnRight
+  - name: POTRACE_TURNPOLICY_MINORITY
+    rename: TurnMinority
+  - name: POTRACE_TURNPOLICY_MAJORITY
+    rename: TurnMajority
+  - name: POTRACE_TURNPOLICY_RANDOM
+    rename: TurnRandom
 replace:
   - regexp: 'libc\.Free\(unsafe\.Pointer\([\w&.\[\]]+\)\)'
+  - old: 'potrace dev'
+    new: 'potrace "+Version+"'
+  - old: 'potracelib dev'
+    new: 'potracelib "+Version+"'
+  - old: 'unsafe.Sizeof(Word(0))'
+    new: 'sizeofWord'
+  - old: POTRACE_TURNPOLICY_BLACK
+    new: TurnBlack
+  - old: POTRACE_TURNPOLICY_WHITE
+    new: TurnWhite
+  - old: POTRACE_TURNPOLICY_LEFT
+    new: TurnLeft
+  - old: POTRACE_TURNPOLICY_RIGHT
+    new: TurnRight
+  - old: POTRACE_TURNPOLICY_MINORITY
+    new: TurnMinority
+  - old: POTRACE_TURNPOLICY_MAJORITY
+    new: TurnMajority
+  - old: POTRACE_TURNPOLICY_RANDOM
+    new: TurnRandom
+  - old: POTRACE_STATUS_OK
+    new: statusOK
+  - old: POTRACE_STATUS_INCOMPLETE
+    new: statusIncomplete
+  - old: DEFAULT_PAPERWIDTH
+    new: DefaultPaperWidth
+  - old: DEFAULT_PAPERHEIGHT
+    new: DefaultPaperHeight
+src_files:
+  - name: 'bitmap_fnc.c'
+    content: |
+      #include <stdbool.h>
+      #include "bitmap.h"
+      
+      bool BM_GET_fnc(const potrace_bitmap_t *bm, int x, int y) { return BM_GET(bm, x, y); }
+      void BM_PUT_fnc(const potrace_bitmap_t *bm, int x, int y, bool b) { BM_PUT(bm, x, y, b); }
 files:
   - name: auxiliary.h
     skip:
@@ -143,37 +212,39 @@ files:
   - name: backend_svg.c
     idents:
       - name: info_s
-        rename: BackendInfo
+        rename: RenderConf
         fields:
           - name: debug
             type: bool
           - name: opaque
             type: bool
+          - name: compress
+            type: bool
     replace:
       - old: 'func unit('
-        new: 'func unit(info *BackendInfo, '
+        new: 'func unit(info *RenderConf, '
       - old: 'func svg_moveto('
-        new: 'func svg_moveto(info *BackendInfo, '
+        new: 'func svg_moveto(info *RenderConf, '
       - old: 'func svg_rmoveto('
-        new: 'func svg_rmoveto(info *BackendInfo, '
+        new: 'func svg_rmoveto(info *RenderConf, '
       - old: 'func svg_lineto('
-        new: 'func svg_lineto(info *BackendInfo, '
+        new: 'func svg_lineto(info *RenderConf, '
       - old: 'func svg_curveto('
-        new: 'func svg_curveto(info *BackendInfo, '
+        new: 'func svg_curveto(info *RenderConf, '
       - old: 'func svg_path('
-        new: 'func svg_path(info *BackendInfo, '
+        new: 'func svg_path(info *RenderConf, '
       - old: 'func svg_jaggy_path('
-        new: 'func svg_jaggy_path(info *BackendInfo, '
+        new: 'func svg_jaggy_path(info *RenderConf, '
       - old: 'func write_paths_opaque('
-        new: 'func write_paths_opaque(info *BackendInfo, '
+        new: 'func write_paths_opaque(info *RenderConf, '
       - old: 'func write_paths_transparent_rec('
-        new: 'func write_paths_transparent_rec(info *BackendInfo, '
+        new: 'func write_paths_transparent_rec(info *RenderConf, '
       - old: 'func write_paths_transparent('
-        new: 'func write_paths_transparent(info *BackendInfo, '
+        new: 'func write_paths_transparent(info *RenderConf, '
       - old: 'func page_svg('
-        new: 'func page_svg(info *BackendInfo, '
+        new: 'func page_svg(info *RenderConf, '
       - old: 'func page_gimp('
-        new: 'func page_gimp(info *BackendInfo, '
+        new: 'func page_gimp(info *RenderConf, '
       - old: 'unit(p)'
         new: 'unit(info, p)'
       - old: 'unit(p1)'
@@ -208,44 +279,54 @@ files:
         rename: pdf_ship
       - name: unit
         rename: pdf_unit
+      - name: color_t
+        rename: pdfColor
       - name: info_s
-        rename: BackendInfo
+        rename: RenderConf
         fields:
           - name: debug
             type: bool
           - name: opaque
             type: bool
+          - name: compress
+            type: bool
+      - name: intarray_t
+        alias: true
+      - name: intarray_s
+        fields:
+          - name: data
+            type: slice
     replace:
       - old: 'func render0('
-        new: 'func render0(info *BackendInfo, '
+        new: 'func render0(info *RenderConf, '
       - old: 'func render0_opaque('
-        new: 'func render0_opaque(info *BackendInfo, '
+        new: 'func render0_opaque(info *RenderConf, '
       - old: 'func pdf_render('
-        new: 'func pdf_render(info *BackendInfo, '
+        new: 'func pdf_render(info *RenderConf, '
       - old: 'func pdf_callbacks('
-        new: 'func pdf_callbacks(info *BackendInfo, '
+        new: 'func pdf_callbacks(info *RenderConf, '
       - old: 'func pdf_unit('
-        new: 'func pdf_unit(info *BackendInfo, '
+        new: 'func pdf_unit(info *RenderConf, '
       - old: 'func pdf_coords('
-        new: 'func pdf_coords(info *BackendInfo, '
+        new: 'func pdf_coords(info *RenderConf, '
       - old: 'func pdf_moveto('
-        new: 'func pdf_moveto(info *BackendInfo, '
+        new: 'func pdf_moveto(info *RenderConf, '
       - old: 'func pdf_lineto('
-        new: 'func pdf_lineto(info *BackendInfo, '
+        new: 'func pdf_lineto(info *RenderConf, '
       - old: 'func pdf_curveto('
-        new: 'func pdf_curveto(info *BackendInfo, '
+        new: 'func pdf_curveto(info *RenderConf, '
       - old: 'func pdf_path('
-        new: 'func pdf_path(info *BackendInfo, '
+        new: 'func pdf_path(info *RenderConf, '
       - old: 'func pdf_pageinit('
-        new: 'func pdf_pageinit(info *BackendInfo, '
+        new: 'func pdf_pageinit(info *RenderConf, '
       - old: 'func page_pdfpage('
-        new: 'func page_pdfpage(info *BackendInfo, '
+        new: 'func page_pdfpage(info *RenderConf, '
       - old: 'func page_pdf('
-        new: 'func page_pdf(info *BackendInfo, '
+        new: 'func page_pdf(info *RenderConf, '
       - old: 'func init_pdf('
-        new: 'func init_pdf(info *BackendInfo, '
+        new: 'func init_pdf(info *RenderConf, '
       - old: 'func term_pdf('
-        new: 'func term_pdf(info *BackendInfo, '
+        new: 'func term_pdf(info *RenderConf, '
       - old: 'render0_opaque(plist)'
         new: 'render0_opaque(info, plist)'
       - old: 'render0(plist)'
@@ -268,6 +349,10 @@ files:
         new: 'pdf_render(info, plist'
       - old: 'pdf_path(&'
         new: 'pdf_path(info, &'
+      - old: 'p = (*int)(libc.Realloc(unsafe.Pointer(&ar.Data[0]), s*int(unsafe.Sizeof(int(0)))))'
+        new: 'old := p; p = make([]int, s); copy(p, old)'
+      - old: 'p *int'
+        new: 'p []int'
   - name: bbox.c
     skip:
       - potrace_dpoint_s
@@ -293,6 +378,13 @@ files:
         new: 'bm.Map = nil'
       - old: 'libc.Errno = ENOMEM'
         new: 'panic("out of memory")'
+  - name: bitmap_fnc.c
+    replace:
+      - old: 'func BM_GET_fnc(bm *Bitmap, '
+        new: 'func (bm *Bitmap) Get('
+      - old: 'func BM_PUT_fnc(bm *Bitmap, '
+        new: 'func (bm *Bitmap) Put('
+      - old: 'import "unsafe"'
   - name: bitmap_io.c
   - name: bitops.h
   - name: curve.c
@@ -320,9 +412,10 @@ files:
         new: 'pt[len_].X = x'
       - old: '(*(*Point)(unsafe.Add(unsafe.Pointer(pt), unsafe.Sizeof(Point{})*uintptr(len_)))).Y = y'
         new: 'pt[len_].Y = y'
-  - name: flate.c
-    skip:
-      - lzw_xship
+      - old: '"unsafe"'
+#  - name: flate.c
+#    skip:
+#      - lzw_xship
   - name: greymap.c
     skip:
       - fgetc_ws
@@ -341,17 +434,19 @@ files:
       - name: getsize
         rename: gm_getsize
     replace:
-      - old: 'gm.Base = []gm_sample_t((*gm_sample_t)(libc.Calloc(1, int(size))))'
-        new: 'gm.Base = make([]gm_sample_t, uintptr(size)/unsafe.Sizeof(gm_sample_t(0)))'
-      - old: 'newbase *gm_sample_t'
-        new: 'newbase []gm_sample_t'
-      - old: 'newbase = (*gm_sample_t)(libc.Realloc(unsafe.Pointer(&gm.Base[0]), int(newsize)))'
-        new: 'newbase = make([]gm_sample_t, uintptr(newsize)/unsafe.Sizeof(gm_sample_t(0))); copy(newbase, gm.Base)'
-      - old: '([]gm_sample_t)(newbase)'
+      - old: 'gm.Base = []Sample((*Sample)(libc.Calloc(1, int(size))))'
+        new: 'gm.Base = make([]Sample, uintptr(size)/unsafe.Sizeof(Sample(0)))'
+      - old: 'newbase *Sample'
+        new: 'newbase []Sample'
+      - old: 'newbase = (*Sample)(libc.Realloc(unsafe.Pointer(&gm.Base[0]), int(newsize)))'
+        new: 'newbase = make([]Sample, uintptr(newsize)/unsafe.Sizeof(Sample(0))); copy(newbase, gm.Base)'
+      - old: '([]Sample)(newbase)'
         new: 'newbase'
       - old: 'libc.Errno = ENOMEM'
         new: 'panic("out of memory")'
   - name: trace.c
+    skip:
+      - COS179
     idents:
       # collisions with functions defined in other files
       # and yes, those functions do different things
@@ -361,27 +456,100 @@ files:
         rename: aux_interval
       - name: bezier
         rename: trace_bezier
+    replace:
+      - old: 'INFTY'
+        new: 'infty'
   - name: trans.c
   - name: progress.h
-  - name: progress_bar.c
+#  - name: progress_bar.c
   - name: potracelib.c
-  - name: main.h
     skip:
+      - potrace_version
+      - potrace_state_free
+      - potrace_param_free
+    replace:
+      - old: 'libc.MemCpy(unsafe.Pointer(p), unsafe.Pointer(&param_default), int(unsafe.Sizeof(Config{})))'
+        new: '*p = param_default'
+      - old: '"github.com/gotranspile/cxgo/runtime/libc"'
+  - name: main.c
+    skip:
+      - M_PI
+      - DEFAULT_DIM_NAME
+      - DEFAULT_PAPERFORMAT
       - info_t
+      - pageformat_s
+      - pageformat_t
+      - pageformat
+      - turnpolicy
+      - turnpolicy_s
+      - turnpolicy_t
+      - backend
+      - backend_s
+      - backend_t
+      - backend_lookup
+      - backend_list
+      - license
+      - show_defaults
+      - usage
+      - parse_dimension
+      - parse_dimensions
+      - parse_color
+      - longopts
+      - shortopts
+      - dopts
+      - my_fopen_read
+      - my_fopen_write
+      - my_fclose
+      - make_outfilename
+      - process_file
+      - info
+      - main
     idents:
       - name: info_s
-        rename: BackendInfo
+        rename: RenderConf
         fields:
           - name: debug
             type: bool
           - name: opaque
             type: bool
+          - name: compress
+            type: bool
+      - name: backend_s
+        rename: BackendInfo
+        fields:
+          - name: pixel
+            type: bool
+          - name: fixed
+            type: bool
+    replace:
+      - old: 'func calc_dimensions('
+        new: 'func calc_dimensions(info *RenderConf, '
+      - old: '1e+30'
+        new: 'undef'
+      - regexp: 'Param\s+\*Config'
+      - regexp: 'Progress_bar\s+\*progress_bar_t'
+      - old: |
+          const (
+          	OPT_TIGHT = iota + 300
+          	OPT_FILLCOLOR
+          	OPT_OPAQUE
+          	OPT_GROUP
+          	OPT_FLAT
+          	OPT_PROGRESS
+          	OPT_TTY
+          )
+      - old: |
+          const DIM_IN = 72
+          const DIM_CM = 72
+          const DIM_MM = 72
+          const DIM_PT = 1
+          const DEFAULT_DIM = 72
   - name: mkbitmap.c
     idents:
       - name: process_file
-        rename: ProcessFile
+        rename: processFile
       - name: info_s
-        rename: Config
+        rename: FileConfig
         fields:
           - name: invert
             type: bool
@@ -409,23 +577,5 @@ files:
       - info
       - info_t
     replace:
-      - old: 'func ProcessFile('
-        new: 'func ProcessFile(info *Config, '
-  - name: hacks.go
-    content: |
-      package gotrace
-
-      // C flips bitmaps by using negative bitmap strides, which we cannot represent in Go with slices
-
-      func bm_flip(bm *Bitmap) {
-      	// TODO: implement
-      }
-
-      func gm_flip(gm *Greymap) {
-      	// TODO: implement
-      }
-
-      // unused in the code
-
-      type backend_s struct {}
-      type potrace_privstate_s struct {}
+      - old: 'func processFile('
+        new: 'func processFile(info *FileConfig, '

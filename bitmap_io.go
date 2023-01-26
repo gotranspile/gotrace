@@ -27,7 +27,7 @@ func fgetc_ws(f *stdio.File) int {
 func readnum(f *stdio.File) int {
 	var (
 		c   int
-		acc int
+		acc uint64
 	)
 	for {
 		c = fgetc_ws(f)
@@ -38,7 +38,7 @@ func readnum(f *stdio.File) int {
 			break
 		}
 	}
-	acc = c - '0'
+	acc = uint64(c - '0')
 	for {
 		c = f.GetC()
 		if c == stdio.EOF {
@@ -49,9 +49,12 @@ func readnum(f *stdio.File) int {
 			break
 		}
 		acc *= 10
-		acc += c - '0'
+		acc += uint64(c - '0')
+		if acc > math.MaxInt32 {
+			return -1
+		}
 	}
-	return acc
+	return int(acc)
 }
 func readbit(f *stdio.File) int {
 	var c int
@@ -69,7 +72,7 @@ func readbit(f *stdio.File) int {
 
 var bm_read_error *byte = nil
 
-func BitmapRead(f *stdio.File, threshold float64, bmp **Bitmap) int {
+func bitmapRead(f *stdio.File, threshold float64, bmp **Bitmap) int {
 	var magic [2]int
 	magic[0] = fgetc_ws(f)
 	if magic[0] == stdio.EOF {
@@ -125,9 +128,9 @@ func bm_readbody_pnm(f *stdio.File, threshold float64, bmp **Bitmap, magic int) 
 					goto eof
 				}
 				if b != 0 {
-					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(unsafe.Sizeof(Word(0))))))] |= Word((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> (x & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)))
+					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(sizeofWord))))] |= Word((1 << ((8 * (int(sizeofWord))) - 1)) >> (x & ((8 * (int(sizeofWord))) - 1)))
 				} else {
-					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(unsafe.Sizeof(Word(0))))))] &= Word(^((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> (x & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1))))
+					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(sizeofWord))))] &= Word(^((1 << ((8 * (int(sizeofWord))) - 1)) >> (x & ((8 * (int(sizeofWord))) - 1))))
 				}
 			}
 		}
@@ -149,9 +152,9 @@ func bm_readbody_pnm(f *stdio.File, threshold float64, bmp **Bitmap, magic int) 
 					}
 					return 1
 				}()) != 0 {
-					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(unsafe.Sizeof(Word(0))))))] |= Word((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> (x & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)))
+					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(sizeofWord))))] |= Word((1 << ((8 * (int(sizeofWord))) - 1)) >> (x & ((8 * (int(sizeofWord))) - 1)))
 				} else {
-					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(unsafe.Sizeof(Word(0))))))] &= Word(^((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> (x & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1))))
+					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(sizeofWord))))] &= Word(^((1 << ((8 * (int(sizeofWord))) - 1)) >> (x & ((8 * (int(sizeofWord))) - 1))))
 				}
 			}
 		}
@@ -177,9 +180,9 @@ func bm_readbody_pnm(f *stdio.File, threshold float64, bmp **Bitmap, magic int) 
 					}
 					return 1
 				}()) != 0 {
-					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(unsafe.Sizeof(Word(0))))))] |= Word((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> (x & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)))
+					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(sizeofWord))))] |= Word((1 << ((8 * (int(sizeofWord))) - 1)) >> (x & ((8 * (int(sizeofWord))) - 1)))
 				} else {
-					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(unsafe.Sizeof(Word(0))))))] &= Word(^((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> (x & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1))))
+					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(sizeofWord))))] &= Word(^((1 << ((8 * (int(sizeofWord))) - 1)) >> (x & ((8 * (int(sizeofWord))) - 1))))
 				}
 			}
 		}
@@ -196,7 +199,7 @@ func bm_readbody_pnm(f *stdio.File, threshold float64, bmp **Bitmap, magic int) 
 				if b == stdio.EOF {
 					goto eof
 				}
-				bm.Map[int64(y)*int64(bm.Dy)+int64((i*8)/(8*(int(unsafe.Sizeof(Word(0))))))] |= (Word(b)) << Word(((int(unsafe.Sizeof(Word(0))))-1-i%(int(unsafe.Sizeof(Word(0)))))*8)
+				bm.Map[int64(y)*int64(bm.Dy)+int64((i*8)/(8*(int(sizeofWord))))] |= (Word(b)) << Word(((int(sizeofWord))-1-i%(int(sizeofWord)))*8)
 			}
 		}
 	case '5':
@@ -229,9 +232,9 @@ func bm_readbody_pnm(f *stdio.File, threshold float64, bmp **Bitmap, magic int) 
 					}
 					return 1
 				}()) != 0 {
-					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(unsafe.Sizeof(Word(0))))))] |= Word((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> (x & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)))
+					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(sizeofWord))))] |= Word((1 << ((8 * (int(sizeofWord))) - 1)) >> (x & ((8 * (int(sizeofWord))) - 1)))
 				} else {
-					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(unsafe.Sizeof(Word(0))))))] &= Word(^((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> (x & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1))))
+					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(sizeofWord))))] &= Word(^((1 << ((8 * (int(sizeofWord))) - 1)) >> (x & ((8 * (int(sizeofWord))) - 1))))
 				}
 			}
 		}
@@ -269,9 +272,9 @@ func bm_readbody_pnm(f *stdio.File, threshold float64, bmp **Bitmap, magic int) 
 					}
 					return 1
 				}()) != 0 {
-					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(unsafe.Sizeof(Word(0))))))] |= Word((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> (x & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)))
+					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(sizeofWord))))] |= Word((1 << ((8 * (int(sizeofWord))) - 1)) >> (x & ((8 * (int(sizeofWord))) - 1)))
 				} else {
-					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(unsafe.Sizeof(Word(0))))))] &= Word(^((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> (x & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1))))
+					bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(sizeofWord))))] &= Word(^((1 << ((8 * (int(sizeofWord))) - 1)) >> (x & ((8 * (int(sizeofWord))) - 1))))
 				}
 			}
 		}
@@ -555,7 +558,7 @@ func bm_readbody_bmp(f *stdio.File, threshold float64, bmp **Bitmap) int {
 					goto eof
 				}
 				b ^= uint(mask)
-				bm.Map[int64(y)*int64(bm.Dy)+int64((i*8)/uint(8*(int(unsafe.Sizeof(Word(0))))))] |= (Word(b)) << Word(((int(unsafe.Sizeof(Word(0))))-1-int(i%uint(int(unsafe.Sizeof(Word(0))))))*8)
+				bm.Map[int64(y)*int64(bm.Dy)+int64((i*8)/uint(8*(int(sizeofWord))))] |= (Word(b)) << Word(((int(sizeofWord))-1-int(i%uint(int(sizeofWord))))*8)
 			}
 			if bmp_pad(f) != 0 {
 				goto try_error
@@ -596,9 +599,9 @@ func bm_readbody_bmp(f *stdio.File, threshold float64, bmp **Bitmap) int {
 					}
 					return 0
 				}()) != 0 {
-					bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(unsafe.Sizeof(Word(0))))))] |= Word((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> int(x&uint((8*(int(unsafe.Sizeof(Word(0)))))-1)))
+					bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(sizeofWord))))] |= Word((1 << ((8 * (int(sizeofWord))) - 1)) >> int(x&uint((8*(int(sizeofWord)))-1)))
 				} else {
-					bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(unsafe.Sizeof(Word(0))))))] &= Word(^((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> int(x&uint((8*(int(unsafe.Sizeof(Word(0)))))-1))))
+					bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(sizeofWord))))] &= Word(^((1 << ((8 * (int(sizeofWord))) - 1)) >> int(x&uint((8*(int(sizeofWord)))-1))))
 				}
 			}
 			if bmp_pad(f) != 0 {
@@ -625,9 +628,9 @@ func bm_readbody_bmp(f *stdio.File, threshold float64, bmp **Bitmap) int {
 					}
 					return 1
 				}()) != 0 {
-					bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(unsafe.Sizeof(Word(0))))))] |= Word((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> int(x&uint((8*(int(unsafe.Sizeof(Word(0)))))-1)))
+					bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(sizeofWord))))] |= Word((1 << ((8 * (int(sizeofWord))) - 1)) >> int(x&uint((8*(int(sizeofWord)))-1)))
 				} else {
-					bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(unsafe.Sizeof(Word(0))))))] &= Word(^((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> int(x&uint((8*(int(unsafe.Sizeof(Word(0)))))-1))))
+					bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(sizeofWord))))] &= Word(^((1 << ((8 * (int(sizeofWord))) - 1)) >> int(x&uint((8*(int(sizeofWord)))-1))))
 				}
 			}
 			if bmp_pad(f) != 0 {
@@ -655,9 +658,9 @@ func bm_readbody_bmp(f *stdio.File, threshold float64, bmp **Bitmap) int {
 					}
 					return 1
 				}()) != 0 {
-					bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(unsafe.Sizeof(Word(0))))))] |= Word((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> int(x&uint((8*(int(unsafe.Sizeof(Word(0)))))-1)))
+					bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(sizeofWord))))] |= Word((1 << ((8 * (int(sizeofWord))) - 1)) >> int(x&uint((8*(int(sizeofWord)))-1)))
 				} else {
-					bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(unsafe.Sizeof(Word(0))))))] &= Word(^((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> int(x&uint((8*(int(unsafe.Sizeof(Word(0)))))-1))))
+					bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(sizeofWord))))] &= Word(^((1 << ((8 * (int(sizeofWord))) - 1)) >> int(x&uint((8*(int(sizeofWord)))-1))))
 				}
 			}
 			if bmp_pad(f) != 0 {
@@ -696,9 +699,9 @@ func bm_readbody_bmp(f *stdio.File, threshold float64, bmp **Bitmap) int {
 					realheight = int(y + 1)
 					if int(x) >= 0 && int(x) < bm.W && (int(y) >= 0 && int(y) < bm.H) {
 						if (col[i&1]) != 0 {
-							bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(unsafe.Sizeof(Word(0))))))] |= Word((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> int(x&uint((8*(int(unsafe.Sizeof(Word(0)))))-1)))
+							bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(sizeofWord))))] |= Word((1 << ((8 * (int(sizeofWord))) - 1)) >> int(x&uint((8*(int(sizeofWord)))-1)))
 						} else {
-							bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(unsafe.Sizeof(Word(0))))))] &= Word(^((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> int(x&uint((8*(int(unsafe.Sizeof(Word(0)))))-1))))
+							bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(sizeofWord))))] &= Word(^((1 << ((8 * (int(sizeofWord))) - 1)) >> int(x&uint((8*(int(sizeofWord)))-1))))
 						}
 					} else {
 					}
@@ -740,9 +743,9 @@ func bm_readbody_bmp(f *stdio.File, threshold float64, bmp **Bitmap) int {
 							}
 							return 0
 						}()) != 0 {
-							bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(unsafe.Sizeof(Word(0))))))] |= Word((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> int(x&uint((8*(int(unsafe.Sizeof(Word(0)))))-1)))
+							bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(sizeofWord))))] |= Word((1 << ((8 * (int(sizeofWord))) - 1)) >> int(x&uint((8*(int(sizeofWord)))-1)))
 						} else {
-							bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(unsafe.Sizeof(Word(0))))))] &= Word(^((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> int(x&uint((8*(int(unsafe.Sizeof(Word(0)))))-1))))
+							bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(sizeofWord))))] &= Word(^((1 << ((8 * (int(sizeofWord))) - 1)) >> int(x&uint((8*(int(sizeofWord)))-1))))
 						}
 					} else {
 					}
@@ -782,9 +785,9 @@ func bm_readbody_bmp(f *stdio.File, threshold float64, bmp **Bitmap) int {
 							}
 							return 0
 						}()) != 0 {
-							bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(unsafe.Sizeof(Word(0))))))] |= Word((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> int(x&uint((8*(int(unsafe.Sizeof(Word(0)))))-1)))
+							bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(sizeofWord))))] |= Word((1 << ((8 * (int(sizeofWord))) - 1)) >> int(x&uint((8*(int(sizeofWord)))-1)))
 						} else {
-							bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(unsafe.Sizeof(Word(0))))))] &= Word(^((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> int(x&uint((8*(int(unsafe.Sizeof(Word(0)))))-1))))
+							bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(sizeofWord))))] &= Word(^((1 << ((8 * (int(sizeofWord))) - 1)) >> int(x&uint((8*(int(sizeofWord)))-1))))
 						}
 					} else {
 					}
@@ -824,9 +827,9 @@ func bm_readbody_bmp(f *stdio.File, threshold float64, bmp **Bitmap) int {
 							}
 							return 0
 						}()) != 0 {
-							bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(unsafe.Sizeof(Word(0))))))] |= Word((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> int(x&uint((8*(int(unsafe.Sizeof(Word(0)))))-1)))
+							bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(sizeofWord))))] |= Word((1 << ((8 * (int(sizeofWord))) - 1)) >> int(x&uint((8*(int(sizeofWord)))-1)))
 						} else {
-							bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(unsafe.Sizeof(Word(0))))))] &= Word(^((1 << ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)) >> int(x&uint((8*(int(unsafe.Sizeof(Word(0)))))-1))))
+							bm.Map[int64(y)*int64(bm.Dy)+int64(x/uint(8*(int(sizeofWord))))] &= Word(^((1 << ((8 * (int(sizeofWord))) - 1)) >> int(x&uint((8*(int(sizeofWord)))-1))))
 						}
 					} else {
 					}
@@ -886,7 +889,7 @@ func bm_writepbm(f *stdio.File, bm *Bitmap) {
 	stdio.Fprintf(f, "P4\n%d %d\n", w, h)
 	for y = h - 1; y >= 0; y-- {
 		for i = 0; i < bpr; i++ {
-			c = int((bm.Map[int64(y)*int64(bm.Dy)+int64((i*8)/(8*(int(unsafe.Sizeof(Word(0))))))] >> Word(((int(unsafe.Sizeof(Word(0))))-1-i%(int(unsafe.Sizeof(Word(0)))))*8)) & math.MaxUint8)
+			c = int((bm.Map[int64(y)*int64(bm.Dy)+int64((i*8)/(8*(int(sizeofWord))))] >> Word(((int(sizeofWord))-1-i%(int(sizeofWord)))*8)) & math.MaxUint8)
 			f.PutC(c)
 		}
 	}
@@ -919,7 +922,7 @@ func bm_print(f *stdio.File, bm *Bitmap) int {
 				for y = yy * bm.H / sh; y < (yy+1)*bm.H/sh; y++ {
 					if func() bool {
 						if x >= 0 && x < bm.W && (y >= 0 && y < bm.H) {
-							return (bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(unsafe.Sizeof(Word(0))))))] & Word((1<<((8*(int(unsafe.Sizeof(Word(0)))))-1))>>(x&((8*(int(unsafe.Sizeof(Word(0)))))-1)))) != 0
+							return (bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(sizeofWord))))] & Word((1<<((8*(int(sizeofWord)))-1))>>(x&((8*(int(sizeofWord)))-1)))) != 0
 						}
 						return false
 					}() {

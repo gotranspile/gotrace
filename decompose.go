@@ -3,7 +3,6 @@ package gotrace
 import (
 	"github.com/gotranspile/cxgo/runtime/libc"
 	"math"
-	"unsafe"
 )
 
 func detrand(x int, y int) int {
@@ -20,10 +19,10 @@ func bm_clearexcess(bm *Bitmap) {
 		mask Word
 		y    int
 	)
-	if bm.W%(8*(int(unsafe.Sizeof(Word(0))))) != 0 {
-		mask = (^Word(0)) << Word((8*(int(unsafe.Sizeof(Word(0)))))-bm.W%(8*(int(unsafe.Sizeof(Word(0))))))
+	if bm.W%(8*(int(sizeofWord))) != 0 {
+		mask = (^Word(0)) << Word((8*(int(sizeofWord)))-bm.W%(8*(int(sizeofWord))))
 		for y = 0; y < bm.H; y++ {
-			bm.Map[int64(y)*int64(bm.Dy)+int64(bm.W/(8*(int(unsafe.Sizeof(Word(0))))))] &= mask
+			bm.Map[int64(y)*int64(bm.Dy)+int64(bm.W/(8*(int(sizeofWord))))] &= mask
 		}
 	}
 }
@@ -38,8 +37,8 @@ type bbox_t bbox_s
 
 func clear_bm_with_bbox(bm *Bitmap, bbox *bbox_t) {
 	var (
-		imin int = (bbox.X0 / (8 * (int(unsafe.Sizeof(Word(0))))))
-		imax int = ((bbox.X1 + 8*(int(unsafe.Sizeof(Word(0)))) - 1) / (8 * (int(unsafe.Sizeof(Word(0))))))
+		imin int = (bbox.X0 / (8 * (int(sizeofWord))))
+		imax int = ((bbox.X1 + 8*(int(sizeofWord)) - 1) / (8 * (int(sizeofWord))))
 		i    int
 		y    int
 	)
@@ -60,7 +59,7 @@ func majority(bm *Bitmap, x int, y int) int {
 		for a = -i + 1; a <= i-1; a++ {
 			if func() bool {
 				if (x+a) >= 0 && (x+a) < bm.W && ((y+i-1) >= 0 && (y+i-1) < bm.H) {
-					return (bm.Map[int64(y+i-1)*int64(bm.Dy)+int64((x+a)/(8*(int(unsafe.Sizeof(Word(0))))))] & Word((1<<((8*(int(unsafe.Sizeof(Word(0)))))-1))>>((x+a)&((8*(int(unsafe.Sizeof(Word(0)))))-1)))) != 0
+					return (bm.Map[int64(y+i-1)*int64(bm.Dy)+int64((x+a)/(8*(int(sizeofWord))))] & Word((1<<((8*(int(sizeofWord)))-1))>>((x+a)&((8*(int(sizeofWord)))-1)))) != 0
 				}
 				return false
 			}() {
@@ -70,7 +69,7 @@ func majority(bm *Bitmap, x int, y int) int {
 			}
 			if func() bool {
 				if (x+i-1) >= 0 && (x+i-1) < bm.W && ((y+a-1) >= 0 && (y+a-1) < bm.H) {
-					return (bm.Map[int64(y+a-1)*int64(bm.Dy)+int64((x+i-1)/(8*(int(unsafe.Sizeof(Word(0))))))] & Word((1<<((8*(int(unsafe.Sizeof(Word(0)))))-1))>>((x+i-1)&((8*(int(unsafe.Sizeof(Word(0)))))-1)))) != 0
+					return (bm.Map[int64(y+a-1)*int64(bm.Dy)+int64((x+i-1)/(8*(int(sizeofWord))))] & Word((1<<((8*(int(sizeofWord)))-1))>>((x+i-1)&((8*(int(sizeofWord)))-1)))) != 0
 				}
 				return false
 			}() {
@@ -80,7 +79,7 @@ func majority(bm *Bitmap, x int, y int) int {
 			}
 			if func() bool {
 				if (x+a-1) >= 0 && (x+a-1) < bm.W && ((y-i) >= 0 && (y-i) < bm.H) {
-					return (bm.Map[int64(y-i)*int64(bm.Dy)+int64((x+a-1)/(8*(int(unsafe.Sizeof(Word(0))))))] & Word((1<<((8*(int(unsafe.Sizeof(Word(0)))))-1))>>((x+a-1)&((8*(int(unsafe.Sizeof(Word(0)))))-1)))) != 0
+					return (bm.Map[int64(y-i)*int64(bm.Dy)+int64((x+a-1)/(8*(int(sizeofWord))))] & Word((1<<((8*(int(sizeofWord)))-1))>>((x+a-1)&((8*(int(sizeofWord)))-1)))) != 0
 				}
 				return false
 			}() {
@@ -90,7 +89,7 @@ func majority(bm *Bitmap, x int, y int) int {
 			}
 			if func() bool {
 				if (x-i) >= 0 && (x-i) < bm.W && ((y+a) >= 0 && (y+a) < bm.H) {
-					return (bm.Map[int64(y+a)*int64(bm.Dy)+int64((x-i)/(8*(int(unsafe.Sizeof(Word(0))))))] & Word((1<<((8*(int(unsafe.Sizeof(Word(0)))))-1))>>((x-i)&((8*(int(unsafe.Sizeof(Word(0)))))-1)))) != 0
+					return (bm.Map[int64(y+a)*int64(bm.Dy)+int64((x-i)/(8*(int(sizeofWord))))] & Word((1<<((8*(int(sizeofWord)))-1))>>((x-i)&((8*(int(sizeofWord)))-1)))) != 0
 				}
 				return false
 			}() {
@@ -109,21 +108,21 @@ func majority(bm *Bitmap, x int, y int) int {
 }
 func xor_to_ref(bm *Bitmap, x int, y int, xa int) {
 	var (
-		xhi int = x & (-(8 * (int(unsafe.Sizeof(Word(0))))))
-		xlo int = x & ((8 * (int(unsafe.Sizeof(Word(0))))) - 1)
+		xhi int = x & (-(8 * (int(sizeofWord))))
+		xlo int = x & ((8 * (int(sizeofWord))) - 1)
 		i   int
 	)
 	if xhi < xa {
-		for i = xhi; i < xa; i += 8 * (int(unsafe.Sizeof(Word(0)))) {
-			bm.Map[int64(y)*int64(bm.Dy)+int64(i/(8*(int(unsafe.Sizeof(Word(0))))))] ^= ^Word(0)
+		for i = xhi; i < xa; i += 8 * (int(sizeofWord)) {
+			bm.Map[int64(y)*int64(bm.Dy)+int64(i/(8*(int(sizeofWord))))] ^= ^Word(0)
 		}
 	} else {
-		for i = xa; i < xhi; i += 8 * (int(unsafe.Sizeof(Word(0)))) {
-			bm.Map[int64(y)*int64(bm.Dy)+int64(i/(8*(int(unsafe.Sizeof(Word(0))))))] ^= ^Word(0)
+		for i = xa; i < xhi; i += 8 * (int(sizeofWord)) {
+			bm.Map[int64(y)*int64(bm.Dy)+int64(i/(8*(int(sizeofWord))))] ^= ^Word(0)
 		}
 	}
 	if xlo != 0 {
-		bm.Map[int64(y)*int64(bm.Dy)+int64(xhi/(8*(int(unsafe.Sizeof(Word(0))))))] ^= (^Word(0)) << Word((8*(int(unsafe.Sizeof(Word(0)))))-xlo)
+		bm.Map[int64(y)*int64(bm.Dy)+int64(xhi/(8*(int(sizeofWord))))] ^= (^Word(0)) << Word((8*(int(sizeofWord)))-xlo)
 	}
 }
 func xor_path(bm *Bitmap, p *Path) {
@@ -138,7 +137,7 @@ func xor_path(bm *Bitmap, p *Path) {
 		return
 	}
 	y1 = p.Priv.Pt[p.Priv.Len-1].Y
-	xa = p.Priv.Pt[0].X & (-(8 * (int(unsafe.Sizeof(Word(0))))))
+	xa = p.Priv.Pt[0].X & (-(8 * (int(sizeofWord))))
 	for k = 0; k < p.Priv.Len; k++ {
 		x = p.Priv.Pt[k].X
 		y = p.Priv.Pt[k].Y
@@ -227,18 +226,18 @@ func findpath(bm *Bitmap, x0 int, y0 int, sign int, turnpolicy int) *Path {
 		}
 		c = int(libc.BoolToInt(func() bool {
 			if (x+(dirx+diry-1)/2) >= 0 && (x+(dirx+diry-1)/2) < bm.W && ((y+(diry-dirx-1)/2) >= 0 && (y+(diry-dirx-1)/2) < bm.H) {
-				return (bm.Map[int64(y+(diry-dirx-1)/2)*int64(bm.Dy)+int64((x+(dirx+diry-1)/2)/(8*(int(unsafe.Sizeof(Word(0))))))] & Word((1<<((8*(int(unsafe.Sizeof(Word(0)))))-1))>>((x+(dirx+diry-1)/2)&((8*(int(unsafe.Sizeof(Word(0)))))-1)))) != 0
+				return (bm.Map[int64(y+(diry-dirx-1)/2)*int64(bm.Dy)+int64((x+(dirx+diry-1)/2)/(8*(int(sizeofWord))))] & Word((1<<((8*(int(sizeofWord)))-1))>>((x+(dirx+diry-1)/2)&((8*(int(sizeofWord)))-1)))) != 0
 			}
 			return false
 		}()))
 		d = int(libc.BoolToInt(func() bool {
 			if (x+(dirx-diry-1)/2) >= 0 && (x+(dirx-diry-1)/2) < bm.W && ((y+(diry+dirx-1)/2) >= 0 && (y+(diry+dirx-1)/2) < bm.H) {
-				return (bm.Map[int64(y+(diry+dirx-1)/2)*int64(bm.Dy)+int64((x+(dirx-diry-1)/2)/(8*(int(unsafe.Sizeof(Word(0))))))] & Word((1<<((8*(int(unsafe.Sizeof(Word(0)))))-1))>>((x+(dirx-diry-1)/2)&((8*(int(unsafe.Sizeof(Word(0)))))-1)))) != 0
+				return (bm.Map[int64(y+(diry+dirx-1)/2)*int64(bm.Dy)+int64((x+(dirx-diry-1)/2)/(8*(int(sizeofWord))))] & Word((1<<((8*(int(sizeofWord)))-1))>>((x+(dirx-diry-1)/2)&((8*(int(sizeofWord)))-1)))) != 0
 			}
 			return false
 		}()))
 		if c != 0 && d == 0 {
-			if turnpolicy == POTRACE_TURNPOLICY_RIGHT || turnpolicy == POTRACE_TURNPOLICY_BLACK && sign == '+' || turnpolicy == POTRACE_TURNPOLICY_WHITE && sign == '-' || turnpolicy == POTRACE_TURNPOLICY_RANDOM && detrand(x, y) != 0 || turnpolicy == POTRACE_TURNPOLICY_MAJORITY && majority(bm, x, y) != 0 || turnpolicy == POTRACE_TURNPOLICY_MINORITY && majority(bm, x, y) == 0 {
+			if turnpolicy == TurnRight || turnpolicy == TurnBlack && sign == '+' || turnpolicy == TurnWhite && sign == '-' || turnpolicy == TurnRandom && detrand(x, y) != 0 || turnpolicy == TurnMajority && majority(bm, x, y) != 0 || turnpolicy == TurnMinority && majority(bm, x, y) == 0 {
 				tmp = dirx
 				dirx = diry
 				diry = -tmp
@@ -328,7 +327,7 @@ func pathlist_to_tree(plist *Path, bm *Bitmap) {
 			}
 			if func() bool {
 				if p.Priv.Pt[0].X >= 0 && p.Priv.Pt[0].X < bm.W && ((p.Priv.Pt[0].Y-1) >= 0 && (p.Priv.Pt[0].Y-1) < bm.H) {
-					return (bm.Map[int64(p.Priv.Pt[0].Y-1)*int64(bm.Dy)+int64(p.Priv.Pt[0].X/(8*(int(unsafe.Sizeof(Word(0))))))] & Word((1<<((8*(int(unsafe.Sizeof(Word(0)))))-1))>>(p.Priv.Pt[0].X&((8*(int(unsafe.Sizeof(Word(0)))))-1)))) != 0
+					return (bm.Map[int64(p.Priv.Pt[0].Y-1)*int64(bm.Dy)+int64(p.Priv.Pt[0].X/(8*(int(sizeofWord))))] & Word((1<<((8*(int(sizeofWord)))-1))>>(p.Priv.Pt[0].X&((8*(int(sizeofWord)))-1)))) != 0
 				}
 				return false
 			}() {
@@ -424,13 +423,13 @@ func findnext(bm *Bitmap, xp *int, yp *int) int {
 		y  int
 		x0 int
 	)
-	x0 = (*xp) & ^((8 * (int(unsafe.Sizeof(Word(0))))) - 1)
+	x0 = (*xp) & ^((8 * (int(sizeofWord))) - 1)
 	for y = *yp; y >= 0; y-- {
-		for x = x0; x < bm.W && x >= 0; x += int(uint(8 * (int(unsafe.Sizeof(Word(0)))))) {
-			if bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(unsafe.Sizeof(Word(0))))))] != 0 {
+		for x = x0; x < bm.W && x >= 0; x += int(uint(8 * (int(sizeofWord)))) {
+			if bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(sizeofWord))))] != 0 {
 				for !(func() bool {
 					if x >= 0 && x < bm.W && (y >= 0 && y < bm.H) {
-						return (bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(unsafe.Sizeof(Word(0))))))] & Word((1<<((8*(int(unsafe.Sizeof(Word(0)))))-1))>>(x&((8*(int(unsafe.Sizeof(Word(0)))))-1)))) != 0
+						return (bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(sizeofWord))))] & Word((1<<((8*(int(sizeofWord)))-1))>>(x&((8*(int(sizeofWord)))-1)))) != 0
 					}
 					return false
 				}()) {
@@ -445,7 +444,7 @@ func findnext(bm *Bitmap, xp *int, yp *int) int {
 	}
 	return 1
 }
-func bm_to_pathlist(bm *Bitmap, plistp **Path, param *Param, progress *progress_t) int {
+func bm_to_pathlist(bm *Bitmap, plistp **Path, param *Config, progress *progress) int {
 	var (
 		x          int
 		y          int
@@ -465,7 +464,7 @@ func bm_to_pathlist(bm *Bitmap, plistp **Path, param *Param, progress *progress_
 	for findnext(bm1, &x, &y) == 0 {
 		if func() bool {
 			if x >= 0 && x < bm.W && (y >= 0 && y < bm.H) {
-				return (bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(unsafe.Sizeof(Word(0))))))] & Word((1<<((8*(int(unsafe.Sizeof(Word(0)))))-1))>>(x&((8*(int(unsafe.Sizeof(Word(0)))))-1)))) != 0
+				return (bm.Map[int64(y)*int64(bm.Dy)+int64(x/(8*(int(sizeofWord))))] & Word((1<<((8*(int(sizeofWord)))-1))>>(x&((8*(int(sizeofWord)))-1)))) != 0
 			}
 			return false
 		}() {
@@ -473,12 +472,12 @@ func bm_to_pathlist(bm *Bitmap, plistp **Path, param *Param, progress *progress_
 		} else {
 			sign = '-'
 		}
-		p = findpath(bm1, x, y+1, sign, param.Turnpolicy)
+		p = findpath(bm1, x, y+1, sign, param.TurnPolicy)
 		if p == nil {
 			goto error
 		}
 		xor_path(bm1, p)
-		if p.Area <= param.Turdsize {
+		if p.Area <= param.TurdSize {
 			path_free(p)
 		} else {
 			for {
