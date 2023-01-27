@@ -1,6 +1,8 @@
 package main
 
 import (
+	"image/jpeg"
+	"image/png"
 	"io"
 	"os"
 	"path/filepath"
@@ -65,7 +67,26 @@ func run(cmd *cobra.Command, args []string) error {
 }
 
 func process(out string, conf *gotrace.Config, fname string, r io.Reader) error {
-	bm, err := gotrace.BitmapRead(r, 0.5)
+	var (
+		bm  *gotrace.Bitmap
+		err error
+	)
+	switch filepath.Ext(fname) {
+	case ".png":
+		img, err := png.Decode(r)
+		if err != nil {
+			return err
+		}
+		bm = gotrace.BitmapFromImage(img, nil)
+	case ".jpg", ".jpeg":
+		img, err := jpeg.Decode(r)
+		if err != nil {
+			return err
+		}
+		bm = gotrace.BitmapFromImage(img, nil)
+	default:
+		bm, err = gotrace.BitmapRead(r, 0.5)
+	}
 	if err != nil {
 		return err
 	}
