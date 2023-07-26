@@ -203,9 +203,17 @@ src_files:
       bool BM_GET_fnc(const potrace_bitmap_t *bm, int x, int y) { return BM_GET(bm, x, y); }
       void BM_PUT_fnc(const potrace_bitmap_t *bm, int x, int y, bool b) { BM_PUT(bm, x, y, b); }
 files:
+  - name: helpers.go
+    content: |
+      package gotrace
+      
+      import "image"
+      
+      type Point = image.Point
   - name: auxiliary.h
     skip:
       - potrace_dpoint_s
+      - point_s
     idents:
       - name: interval
         rename: aux_interval

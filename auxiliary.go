@@ -1,10 +1,5 @@
 package gotrace
 
-type Point struct {
-	X int
-	Y int
-}
-
 func dpoint(p Point) DPoint {
 	var res DPoint
 	res.X = float64(p.X)
