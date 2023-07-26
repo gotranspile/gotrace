@@ -376,7 +376,7 @@ files:
         new: 'bm.Map = newmap'
       - old: 'bm_base(bm) = nil'
         new: 'bm.Map = nil'
-      - old: 'libc.Errno = ENOMEM'
+      - old: 'libc.Errno = libc.ENOMEM'
         new: 'panic("out of memory")'
   - name: bitmap_fnc.c
     replace:
@@ -442,7 +442,7 @@ files:
         new: 'newbase = make([]Sample, uintptr(newsize)/unsafe.Sizeof(Sample(0))); copy(newbase, gm.Base)'
       - old: '([]Sample)(newbase)'
         new: 'newbase'
-      - old: 'libc.Errno = ENOMEM'
+      - old: 'libc.Errno = libc.ENOMEM'
         new: 'panic("out of memory")'
   - name: trace.c
     skip:
