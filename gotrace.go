@@ -1,10 +1,15 @@
 package gotrace
 
-import "errors"
+import (
+	"errors"
+	"image"
+)
 
 var (
 	ErrIncomplete = errors.New("tracing incomplete")
 )
+
+type Point = image.Point
 
 // Trace a bitmap.
 func Trace(bm *Bitmap, conf *Config) (*Path, error) {
