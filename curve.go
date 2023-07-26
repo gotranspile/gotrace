@@ -1,7 +1,5 @@
 package gotrace
 
-import ()
-
 type privCurve struct {
 	N          int
 	Tag        []int

@@ -1,8 +1,9 @@
 package gotrace
 
 import (
-	"github.com/gotranspile/cxgo/runtime/libc"
 	"unsafe"
+
+	"github.com/gotranspile/cxgo/runtime/libc"
 )
 
 func getsize(dy int, h int) int64 {

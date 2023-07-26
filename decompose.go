@@ -1,8 +1,9 @@
 package gotrace
 
 import (
-	"github.com/gotranspile/cxgo/runtime/libc"
 	"math"
+
+	"github.com/gotranspile/cxgo/runtime/libc"
 )
 
 func detrand(x int, y int) int {

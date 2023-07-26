@@ -1,8 +1,9 @@
 package gotrace
 
 import (
-	"github.com/gotranspile/cxgo/runtime/libc"
 	"math"
+
+	"github.com/gotranspile/cxgo/runtime/libc"
 )
 
 type interval_s struct {
