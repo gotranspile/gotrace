@@ -1,7 +1,7 @@
 # GoTrace
 
 Pure Go implementation of [Potrace](https://potrace.sourceforge.net/potracelib.pdf) vectorization library.
-Supports simple SVG and PDF output generation.
+Supports SVG, PDF and DXF output generation.
 
 It is a direct machine translation (transpilation) of potrace using [cxgo](https://github.com/gotranspile/cxgo).
 
@@ -51,3 +51,13 @@ func traceImage(outPath string, img image.Image) error {
 ```
 
 For a full example, see [example_test.go](./example_test.go).
+
+## Updating the source
+
+This library uses `cxgo` to translate C source code directly to Go. See [cxgo.yml](./cxgo.yml) for the config.
+
+To regenerate source, install `cxgo` and `goimports` and run:
+
+```
+go generate
+```

@@ -28,8 +28,9 @@ func TestPotrace(t *testing.T) {
 	plist, err := gotrace.Trace(bm, nil)
 	checkErr(t, err)
 
-	// Test data generate with:
+	// Test data generated with:
 	//		potrace -b <backend> -o ./testdata/stanford.<ext> ./testdata/stanford.pbm
+	//		sha1sum ./testdata/*
 
 	bi := gotrace.NewRenderConf()
 	fname := filepath.Join(testdata, "stanford.svg")
