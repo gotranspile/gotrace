@@ -28,6 +28,9 @@ func TestPotrace(t *testing.T) {
 	plist, err := gotrace.Trace(bm, nil)
 	checkErr(t, err)
 
+	// Test data generate with:
+	//		potrace -b <backend> -o ./testdata/stanford.<ext> ./testdata/stanford.pbm
+
 	bi := gotrace.NewRenderConf()
 	fname := filepath.Join(testdata, "stanford.svg")
 	err = gotrace.RenderFile("svg", bi, fname, plist, bm.W, bm.H)
@@ -39,6 +42,16 @@ func TestPotrace(t *testing.T) {
 	fname = filepath.Join(testdata, "stanford.pdf")
 	err = gotrace.RenderFile("pdf", bi, fname, plist, bm.W, bm.H)
 	checkErr(t, err)
+	if h := hashFile(fname); h != "347917e85988fc7f881244cb2f8adfa7ce04d495" {
+		t.Errorf("unexpected hash for PDF: %s", h)
+	}
+
+	fname = filepath.Join(testdata, "stanford.dxf")
+	err = gotrace.RenderFile("dxf", bi, fname, plist, bm.W, bm.H)
+	checkErr(t, err)
+	if h := hashFile(fname); h != "8c03dff3ce9f41a9b726963b7c6dda4f3dfffbab" {
+		t.Errorf("unexpected hash for DXF: %s", h)
+	}
 }
 
 func TestPotracePNG(t *testing.T) {

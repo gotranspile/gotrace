@@ -50,6 +50,7 @@ func init() {
 	registerBackend("gimppath", BackendInfo{Fixed: false, Pixel: true}, nil, page_gimp, nil)
 	registerBackend("pdf", BackendInfo{Fixed: false, Pixel: false}, init_pdf, page_pdf, term_pdf)
 	registerBackend("pdfpage", BackendInfo{Fixed: true, Pixel: false}, init_pdf, page_pdfpage, term_pdf)
+	registerBackend("dxf", BackendInfo{Fixed: false, Pixel: true}, nil, page_dxf, nil)
 }
 
 const undef = 1e30

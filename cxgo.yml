@@ -361,6 +361,20 @@ files:
         new: 'old := p; p = make([]int, s); copy(p, old)'
       - old: 'p *int'
         new: 'p []int'
+  - name: backend_dxf.c
+    skip:
+      - iprod
+      - M_PI
+    idents:
+      - name: xprod
+        rename: xprodf
+      - name: ship
+        rename: dxf_ship
+      - name: interval
+        rename: aux_interval
+    replace:
+      - old: 'func page_dxf('
+        new: 'func page_dxf(info *RenderConf, '
   - name: bbox.c
     skip:
       - potrace_dpoint_s
